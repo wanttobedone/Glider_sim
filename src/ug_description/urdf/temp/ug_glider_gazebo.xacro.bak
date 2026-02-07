@@ -10,7 +10,7 @@
   <xacro:property name="fluid_density" value="1028.0"/>     <!-- 海水密度 [kg/m^3] -->
 
   <!-- 浮力参数 -->
-  <xacro:property name="hull_volume" value="0.0328"/>        <!-- 排水体积，扣除油馕体积 [m^3] -->
+  <xacro:property name="hull_volume" value="0.0335467"/>        <!-- 排水体积，扣除油馕体积 [m^3] -->
   <xacro:property name="cob_x" value="0.0"/>                <!-- 浮心位置 (原点) -->
   <xacro:property name="cob_y" value="0.0"/>
   <xacro:property name="cob_z" value="0.0"/>

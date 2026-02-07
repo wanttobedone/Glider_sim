@@ -11,19 +11,13 @@
   <xacro:property name="fluid_density" value="1028.0"/>     <!-- 海水密度 [kg/m^3] -->
 
   <!-- 浮力参数 -->
-  <xacro:property name="hull_volume" value="0.0336"/>        <!-- 排水体积，扣除500cc油馕体积 [m^3] -->
+  <xacro:property name="hull_volume" value="0.034"/>        <!-- 0.0335467中性浮力排水体积（壳体+500cc油囊）[m^3] -->
   <xacro:property name="cob_x" value="0.0"/>                <!-- 浮心位置 (原点) -->
   <xacro:property name="cob_y" value="0.0"/>
   <xacro:property name="cob_z" value="0.0"/>
 
   <!-- 油囊（浮力引擎）参数 -->
-  <xacro:property name="oil_neutral_volume" value="0.0005"/>    <!-- 中性浮力时油囊体积 500cc [m^3] -->
-  <xacro:property name="oil_min_volume" value="0.0"/>           <!-- 油囊最小体积 0cc [m^3] -->
-  <xacro:property name="oil_max_volume" value="0.001"/>         <!-- 油囊最大体积 1000cc [m^3] -->
-  <xacro:property name="oil_pump_rate" value="0.0001"/>         <!-- 油泵流速 100cc/s [m^3/s] -->
-  <xacro:property name="oil_bladder_x" value="-0.361"/>         <!-- 油囊位置x（尾部）[m] -->
-  <xacro:property name="oil_bladder_y" value="-0.0005"/>        <!-- 油囊位置y [m] -->
-  <xacro:property name="oil_bladder_z" value="-0.05221"/>       <!-- 油囊位置z（浮心下方）[m] -->
+
 
   <!-- Assume附加质量矩阵 (6x6对角近似) -->
   <!-- TODO: 来自水动力分析或CFD -->
@@ -134,7 +128,8 @@
 
     <!-- 固定翼升力/阻力 - 使用 Gazebo 内置 LiftDrag 插件 -->
     <!-- 注意: libuuv_fin_ros_plugin.so 在 Gazebo 11 + Intel 显卡环境下会崩溃 -->
-    <!-- 挂在 base_link，cp 相对于船体中心 -->
+    <!-- 挂在 base_link 上，cp 指定升力作用点（相对于 base_link 原点） -->
+    <!-- wing_link 被合并到 base_link，确保质量和浮力统一处理 -->
     <gazebo>
       <plugin name="${namespace}_wing_lift" filename="libLiftDragPlugin.so">
         <air_density>${fluid_density}</air_density>
@@ -169,31 +164,7 @@
     <!-- 控制油囊体积产生浮力差，驱动滑翔机升沉 -->
     <!-- 订阅: /${namespace}/buoyancy_engine/cmd_volume (std_msgs/Float64) -->
     <!-- 发布: /${namespace}/buoyancy_engine/status (BuoyancyEngineStatus) -->
-    <gazebo>
-      <plugin name="${namespace}_buoyancy_engine" filename="libbuoyancy_engine_plugin.so">
-        <namespace>${namespace}</namespace>
-        <link_name>base_link</link_name>
-
-        <!-- 流体参数 -->
-        <fluid_density>${fluid_density}</fluid_density>
-
-        <!-- 油囊体积参数 -->
-        <neutral_volume>${oil_neutral_volume}</neutral_volume>
-        <min_volume>${oil_min_volume}</min_volume>
-        <max_volume>${oil_max_volume}</max_volume>
-        <initial_volume>0.0008</initial_volume>  <!-- 启动时油囊初始体积 500cc -->
-
-        <!-- 油泵动态 -->
-        <pump_rate>${oil_pump_rate}</pump_rate>
-
-        <!-- 油囊力作用点（相对于base_link，产生俯仰力矩）-->
-        <bladder_position>${oil_bladder_x} ${oil_bladder_y} ${oil_bladder_z}</bladder_position>
-
-        <!-- ROS话题 -->
-        <command_topic>buoyancy_engine/cmd_volume</command_topic>
-        <status_topic>buoyancy_engine/status</status_topic>
-      </plugin>
-    </gazebo>
+ 
 
     <!-- Gazebo 材质颜色 -->
     <gazebo reference="${namespace}/base_link">

@@ -34,3 +34,5 @@ src/my_glider_sim/
 # OS
 .DS_Store
 Thumbs.db
+
+src/ug_description/scripts/calculate_hull_cog.py

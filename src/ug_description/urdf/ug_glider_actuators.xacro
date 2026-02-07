@@ -44,27 +44,19 @@
     </gazebo>
 
     <!-- 浮力系统 (VBS控制) -->
-    <!--通过在内部油囊和外部油囊之间泵油来控制净浮力-->
-    <!-- <gazebo>
-      <plugin name="${namespace}_buoyancy_engine" filename="libbuoyancy_engine_plugin.so">
-        <link_name>${namespace}/base_link</link_name>
-        <min_volume>0.048</min_volume>
-        <max_volume>0.052</max_volume>
-        <neutral_volume>0.050</neutral_volume>
-        <pump_rate>0.0001</pump_rate>
-      </plugin>
-    </gazebo> -->
+    <!-- 已迁移到 ug_glider_gazebo.xacro 中的 libbuoyancy_engine_plugin.so -->
+    <!-- 基于物理的油囊模型，通过控制体积产生浮力差 -->
 
-    <!-- 浮力系统 -->
-    <!--用一个垂直螺旋桨的力来等效浮力，控制律需要映射节点-->
-    <xacro:thruster_module_first_order_basic_fcn_macro
+    <!-- 推进器等效浮力方案 -->
+    <!-- 用一个垂直螺旋桨的力来等效浮力，控制律需要映射节点 -->
+    <!-- <xacro:thruster_module_first_order_basic_fcn_macro
       namespace="${namespace}"
       thruster_id="0"
       mesh_filename="package://ug_description/meshes/ug_oil.stl"
       dyn_time_constant="0.5"
       rotor_constant="10.08">
       <origin xyz="-0.361 0 -0.052" rpy="0 ${-pi/2} 0"/>
-    </xacro:thruster_module_first_order_basic_fcn_macro>
+    </xacro:thruster_module_first_order_basic_fcn_macro> -->
     
 
   </xacro:macro>

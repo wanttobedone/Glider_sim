@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
 <!--
-  水下滑翔机 - 物理结构定义 (Links 和 Joints) 包含：船体、电池滑块、方向舵、固定翼
-  后续可能尾舵需要加浮力插件或者其它
+  水下滑翔机 - 物理结构定义 (Links 和 Joints)
+  包含：船体、电池滑块、方向舵、固定翼
+
   坐标系定义：
   - X轴：前进方向 (正向 = 船艏)
   - Y轴：右舷方向 (正向 = 右侧)
@@ -13,14 +14,16 @@
   <!-- 参数定义  -->
 
   <!-- 船体参数 -->
-  <xacro:property name="hull_mass" value="20.26"/>           <!-- 干重 [kg]，目前假设质量等于（体积-500cc）*海水密度-舵-固定翼（assume） -->
+  <xacro:property name="hull_mass" value="24.38"/>           <!-- 干重 [kg]，目前假设质量等于（体积-500cc）*海水密度-舵-固定翼（assume） -->
   <xacro:property name="hull_length" value="1.252"/>          <!-- 总长度 [m] -->
   <xacro:property name="hull_diameter" value="0.255"/>       <!-- 船体直径 [m] -->
 
-  <!-- 重心相对于浮心(原点)的偏移，assume在浮心下0.05m -->
-  <xacro:property name="cog_x" value="0.0"/>                <!-- 重心X偏移 [m] -->
-  <xacro:property name="cog_y" value="0.0"/>                <!-- 重心Y偏移 [m] -->
-  <xacro:property name="cog_z" value="-0.05"/>              <!-- 重心Z偏移 [m] (负值=低于浮心) -->
+  <!-- hull重心相对于浮心(原点)的偏移 -->
+  <!-- 注意：这是hull单独的质心，综合质心目标为(0, 0, -0.05) -->
+  <!-- 由calculate_hull_cog.py计算，考虑了电池/舵/翼的质量分布 -->
+  <xacro:property name="cog_x" value="1.0"/>               <!-- hull重心X [m] (偏向头部，补偿尾部质量) -->
+  <xacro:property name="cog_y" value="0.0"/>                <!-- hull重心Y [m] -->
+  <xacro:property name="cog_z" value="-0.05"/>             <!-- hull重心Z [m] (补偿上方翼和舵) -->
 
   <!-- 船体惯性矩 -->
   <xacro:property name="hull_ixx" value="0.165"/>             <!-- Assume横滚惯性矩 [kg*m^2] -->
@@ -30,18 +33,17 @@
   <xacro:property name="hull_iyz" value="0.0"/>
   <xacro:property name="hull_izz" value="2.8"/>            <!-- Assume艏摇惯性矩 [kg*m^2] -->
 
-  <!-- 电池滑块参数-->  <!--注意现在配平尚有问题-->
+  <!-- 电池滑块参数-->
   <xacro:property name="battery_mass" value="10.0"/>        <!-- assume的电池包质量 [kg] -->
-  <xacro:property name="battery_travel" value="0.012"/>      <!-- 最大行程半径 [m] -->
-  <xacro:property name="battery_x_origin" value="-0.1115"/>     <!-- 电池中立位置 [m]-0.12385 -->
-  <!--暂时值，目前与800cc配平-->
+  <xacro:property name="battery_travel" value="0.03385"/>      <!-- 最大行程半径 [m] -->
+  <xacro:property name="battery_x_origin" value="-0.12385"/>     <!-- 电池中立位置 [m]-0.12385 -->
 
   <!-- 方向舵参数 -->
-  <xacro:property name="rudder_mass" value="0.225"/>          <!-- 舵质量 [kg] -->
+  <xacro:property name="rudder_mass" value="0.005"/>          <!-- 舵质量 [kg] -->
   <xacro:property name="rudder_max_angle" value="0.52"/>    <!-- assume最大偏转角 [rad] (~30度) -->
 
   <!-- 固定翼参数 -->
-  <xacro:property name="wing_mass" value="4.0"/>            <!-- assume翼组件质量 [kg] -->
+  <xacro:property name="wing_mass" value="0.1"/>            <!-- assume翼组件质量 [kg] -->
   <xacro:property name="wing_x" value="-0.325"/>            <!-- 翼位置X [m] -->
   <xacro:property name="wing_z" value="0.15"/>              <!-- 翼位置Z [m] -->
 
@@ -150,16 +152,17 @@
     </joint>
 
     <!-- 固定翼 (滑翔升力)-->
-    <!-- 翼是固定的，但为 fin 插件单独创建 link -->
+    <!-- 翼是固定的，为质量分布和升力插件创建独立 link -->
+    <!-- 注意：fixed joint 会导致 Gazebo 将此 link 合并到 parent -->
     <link name="${namespace}/wing_link">
       <inertial>
         <mass value="${wing_mass}"/>
-        <!-- 注意：这个偏移是整体参数配置的一部分，不要随意修改 -->
-        <origin xyz="-0.325 0 0.15" rpy="0 0 0"/>
+        <!-- origin 是质心相对于 wing_link 原点的偏移，设为(0,0,0) -->
+        <!-- wing_link 原点已在 joint 中定义为 (-0.325, 0, 0.15) -->
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.1"/>
       </inertial>
       <!-- 无可视化 - 翼包含在船体网格中 -->
-      <!-- 后续如果翼有单独的网格文件，在此添加 visual -->
     </link>
 
     <joint name="${namespace}/wing_joint" type="fixed">
@@ -167,8 +170,10 @@
       <child link="${namespace}/wing_link"/>
       <origin xyz="${wing_x} 0 ${wing_z}" rpy="0 0 0"/>
     </joint>
+    <!-- 注意：fixed joint 会导致 wing_link 被合并到 base_link -->
+    <!-- 这是期望的行为，确保质量和浮力在同一个 link 中统一处理 -->
 
-    <!--油馕浮力受力点，后续实现浮力插件-->
+    <!--油馕浮力受力点，几何中心-->
     <link name="${namespace}/bladder_link">
       <inertial>
         <mass value="0.001"/>
