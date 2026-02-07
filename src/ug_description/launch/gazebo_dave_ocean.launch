@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!--
+  使用 DAVE 海底世界视图文件启动滑翔机仿真
+-->
+<launch>
+  <arg name="namespace" default="ug_glider"/>
+  <arg name="x" default="0"/>
+  <arg name="y" default="0"/>
+  <arg name="z" default="0"/>
+  <arg name="roll" default="0"/>
+  <arg name="pitch" default="0.0"/>
+  <arg name="yaw" default="0"/>
+  <arg name="debug" default="0"/>
+  <arg name="paused" default="false"/>
+  <arg name="gui" default="true"/>
+
+  <!-- 可选世界文件 -->
+  <arg name="world_name" default="$(find dave_worlds)/worlds/dave_ocean_waves.world"/>
+
+  <!-- 启动 Gazebo (带 dave 海底世界) -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_name)"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+    <arg name="verbose" value="true"/>
+  </include>
+
+  <!-- 发布 NED 坐标系 -->
+  <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
+
+  <!-- 生成滑翔机模型 -->
+  <include file="$(find ug_description)/launch/upload_glider.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+    <arg name="x" value="$(arg x)"/>
+    <arg name="y" value="$(arg y)"/>
+    <arg name="z" value="$(arg z)"/>
+    <arg name="roll" value="$(arg roll)"/>
+    <arg name="pitch" value="$(arg pitch)"/>
+    <arg name="yaw" value="$(arg yaw)"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+
+</launch>

@@ -1,0 +1,36 @@
+# ROS 编译产物
+build/
+devel/
+logs/
+.catkin_tools/
+.catkin_workspace
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# 临时文件
+*.xml~
+repomix-output.xml
+repomix.config.json
+
+# 不上传的依赖包（本地保留备用）
+src/ds_msgs/
+src/ds_sim/
+src/uuv_manipulators/
+
+# 废弃的包
+src/my_glider_sim/
+
+# OS
+.DS_Store
+Thumbs.db

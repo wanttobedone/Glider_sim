@@ -1,0 +1,119 @@
+<?xml version="1.0"?>
+<!--
+  后续添加，实现更精细化仿真，目前的仿真用绝对值，以下参考自uuv_simulator
+  包含：IMU惯导、压力传感器(深度)、GPS(仅水面)、DVL(可选)
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 传感器参数 -->
+
+  <!-- IMU 位置 (相对于 base_link) -->
+  <xacro:property name="imu_x" value="0.0"/>
+  <xacro:property name="imu_y" value="0.0"/>
+  <xacro:property name="imu_z" value="0.0"/>
+
+  <!-- 压力传感器位置 -->
+  <xacro:property name="pressure_x" value="0.0"/>
+  <xacro:property name="pressure_y" value="0.0"/>
+  <xacro:property name="pressure_z" value="0.1"/>
+
+  <!-- 宏定义-->
+
+  <xacro:macro name="ug_glider_sensors" params="namespace">
+
+    <!--IMU 惯性测量单元 -->
+    <link name="${namespace}/imu_link">
+      <inertial>
+        <mass value="0.01"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="${namespace}/imu_joint" type="fixed">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/imu_link"/>
+      <origin xyz="${imu_x} ${imu_y} ${imu_z}" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="${namespace}/imu_link">
+      <sensor name="${namespace}_imu" type="imu">
+        <always_on>true</always_on>
+        <update_rate>50</update_rate>
+        <imu>
+          <angular_velocity>
+            <x><noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.001</stddev>  <!-- TODO: 调整噪声参数 -->
+            </noise></x>
+            <y><noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.001</stddev>
+            </noise></y>
+            <z><noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.001</stddev>
+            </noise></z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x><noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.01</stddev>
+            </noise></x>
+            <y><noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.01</stddev>
+            </noise></y>
+            <z><noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>0.01</stddev>
+            </noise></z>
+          </linear_acceleration>
+        </imu>
+        <plugin name="${namespace}_imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+          <ros>
+            <namespace>${namespace}</namespace>
+            <remapping>~/out:=imu</remapping>
+          </ros>
+          <frame_name>${namespace}/imu_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!--压力传感器 (深度测量)-->
+    <link name="${namespace}/pressure_link">
+      <inertial>
+        <mass value="0.01"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="${namespace}/pressure_joint" type="fixed">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/pressure_link"/>
+      <origin xyz="${pressure_x} ${pressure_y} ${pressure_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- UUV Simulator 压力传感器插件 -->
+    <!-- TODO: 配置好 uuv_sensor_ros_plugins 后启用 -->
+    <!--
+    <gazebo>
+      <plugin name="${namespace}_pressure_plugin" filename="libuuv_gazebo_ros_subsea_pressure_plugin.so">
+        <robot_namespace>${namespace}</robot_namespace>
+        <link_name>${namespace}/pressure_link</link_name>
+        <sensor_topic>pressure</sensor_topic>
+        <update_rate>10</update_rate>
+        <saturation>10000</saturation>
+        <noise_sigma>100.0</noise_sigma>
+        <noise_amplitude>0.0</noise_amplitude>
+        <estimate_depth_on>true</estimate_depth_on>
+        <standard_pressure>101325.0</standard_pressure>
+        <kPaPerM>10.0</kPaPerM>
+      </plugin>
+    </gazebo>
+    -->
+
+  </xacro:macro>
+
+</robot>

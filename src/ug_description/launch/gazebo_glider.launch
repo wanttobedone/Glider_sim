@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+  启动 Gazebo 水下世界 + 生成滑翔机
+-->
+<launch>
+  <arg name="namespace" default="ug_glider"/>
+  <arg name="x" default="0"/>
+  <arg name="y" default="0"/>
+  <arg name="z" default="-10"/>
+  <arg name="debug" default="0"/>
+  <arg name="paused" default="false"/>
+  <arg name="gui" default="true"/>
+
+  <!-- 启动带水下世界的 Gazebo -->
+  <include file="$(find uuv_gazebo_worlds)/launch/ocean_waves.launch">
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="gui" value="$(arg gui)"/>
+  </include>
+
+  <!-- 生成滑翔机模型 -->
+  <include file="$(find ug_description)/launch/upload_glider.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+    <arg name="x" value="$(arg x)"/>
+    <arg name="y" value="$(arg y)"/>
+    <arg name="z" value="$(arg z)"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+</launch>

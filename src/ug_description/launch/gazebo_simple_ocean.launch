@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!--
+  简单水下世界启动滑翔机 (用于调试)
+-->
+<launch>
+  <arg name="namespace" default="ug_glider"/>
+  <arg name="x" default="0"/>
+  <arg name="y" default="0"/>
+  <arg name="z" default="-10"/>
+  <arg name="roll" default="0"/>
+  <arg name="pitch" default="0.3"/>
+  <arg name="yaw" default="0"/>
+  <arg name="debug" default="0"/>
+  <arg name="paused" default="true"/>
+  <arg name="gui" default="true"/>
+
+  <!-- 启动 Gazebo (简单水下世界，无复杂海底) -->
+  <include file="$(find uuv_gazebo_worlds)/launch/empty_underwater_world.launch">
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="gui" value="$(arg gui)"/>
+  </include>
+
+  <!-- 生成滑翔机模型 -->
+  <include file="$(find ug_description)/launch/upload_glider.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+    <arg name="x" value="$(arg x)"/>
+    <arg name="y" value="$(arg y)"/>
+    <arg name="z" value="$(arg z)"/>
+    <arg name="roll" value="$(arg roll)"/>
+    <arg name="pitch" value="$(arg pitch)"/>
+    <arg name="yaw" value="$(arg yaw)"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+
+</launch>

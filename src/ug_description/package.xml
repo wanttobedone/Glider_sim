@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ug_description</name>
+  <version>0.1.0</version>
+  <description>Underwater Glider (UG) URDF/XACRO description package</description>
+
+  <maintainer email="ncu@todo.todo">ncu</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>gazebo_ros</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>joint_state_publisher_gui</depend>
+  <depend>rviz</depend>
+  <depend>xacro</depend>
+  <depend>uuv_descriptions</depend>
+  <depend>uuv_gazebo_ros_plugins</depend>
+  <depend>uuv_sensor_ros_plugins</depend>
+  <depend>uuv_world_plugins</depend>
+
+  <export>
+    <gazebo_ros gazebo_model_path="${prefix}/.."/>
+  </export>
+</package>

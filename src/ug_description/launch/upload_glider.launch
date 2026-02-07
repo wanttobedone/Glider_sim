@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!--
+  将滑翔机模型加载到 Gazebo 中
+-->
+<launch>
+  <arg name="namespace" default="ug_glider"/>
+  <arg name="x" default="0"/>
+  <arg name="y" default="0"/>
+  <arg name="z" default="-10"/>
+  <arg name="roll" default="0"/>
+  <arg name="pitch" default="0"/>
+  <arg name="yaw" default="0"/>
+  <arg name="debug" default="0"/>
+  <arg name="use_sim_time" default="true"/>
+
+  <!-- 使用仿真时间 -->
+  <param name="/use_sim_time" value="$(arg use_sim_time)"/>
+
+  <!-- 加载 URDF 到参数服务器 -->
+  <param name="$(arg namespace)/robot_description"
+         command="$(find xacro)/xacro '$(find ug_description)/urdf/ug_glider.xacro'
+                  namespace:=$(arg namespace)
+                  debug:=$(arg debug)"/>
+
+  <!-- 在 Gazebo 中生成模型 -->
+  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+        args="-urdf
+              -x $(arg x) -y $(arg y) -z $(arg z)
+              -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)
+              -model $(arg namespace)
+              -param $(arg namespace)/robot_description"/>
+
+  <!-- 机器人状态发布器 -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+        ns="$(arg namespace)">
+    <param name="robot_description" value="/$(arg namespace)/robot_description"/>
+  </node>
+</launch>

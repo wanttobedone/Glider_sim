@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+  在 RViz 中显示滑翔机模型，用于可视化和调试
+  用法：roslaunch ug_description display.launch
+-->
+<launch>
+  <arg name="namespace" default="ug_glider"/>
+
+  <!-- 加载 URDF 到参数服务器 -->
+  <param name="robot_description"
+         command="$(find xacro)/xacro '$(find ug_description)/urdf/ug_glider.xacro'
+                  namespace:=$(arg namespace)"/>
+
+  <!-- 关节状态发布器 GUI (用于拖动关节滑块) -->
+  <node name="joint_state_publisher_gui"
+        pkg="joint_state_publisher_gui"
+        type="joint_state_publisher_gui"/>
+
+  <!-- 机器人状态发布器 (TF 坐标变换广播) -->
+  <node name="robot_state_publisher"
+        pkg="robot_state_publisher"
+        type="robot_state_publisher"/>
+
+  <!-- RViz 可视化 -->
+  <node name="rviz" pkg="rviz" type="rviz"
+        args="-d $(find ug_description)/config/glider.rviz"
+        required="false"/>
+</launch>

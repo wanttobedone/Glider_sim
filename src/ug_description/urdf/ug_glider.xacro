@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!--
+  水下滑翔机 - 主入口文件，总装
+  将所有组件组装在一起
+-->
+<robot name="ug_glider" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 参数定义 -->
+  <xacro:arg name="debug" default="0"/>
+  <xacro:arg name="namespace" default="ug_glider"/>
+
+  <!-- 引入 UUV Simulator 公共宏 -->
+  <xacro:include filename="$(find uuv_descriptions)/urdf/common.urdf.xacro"/>
+  <xacro:include filename="$(find uuv_gazebo_ros_plugins)/urdf/snippets.xacro"/>
+
+  <!-- 引入本模型的各个组件文件，但先不用传感器，用仿真中的真值 -->
+  <xacro:include filename="$(find ug_description)/urdf/ug_glider_base.xacro"/>
+  <xacro:include filename="$(find ug_description)/urdf/ug_glider_gazebo.xacro"/>
+  <xacro:include filename="$(find ug_description)/urdf/ug_glider_actuators.xacro"/>
+
+  <!-- 实例化滑翔机各组件 -->
+  <xacro:ug_glider_base namespace="$(arg namespace)"/>
+  <xacro:ug_glider_gazebo namespace="$(arg namespace)" debug="$(arg debug)"/>
+  <xacro:ug_glider_actuators namespace="$(arg namespace)"/>
+
+</robot>
