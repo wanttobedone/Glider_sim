@@ -24,20 +24,20 @@
                        ros-noetic-robot-state-publisher \
                        ros-noetic-joint-state-publisher-gui
 
-  编译
+  ### 编译
 
   cd glider_ws
   catkin build
   source devel/setup.bash
 
-  运行仿真
+  ### 运行仿真
 
   roslaunch ug_description gazebo_dave_ocean.launch
 
-  许可证
+  ### 许可证
 
   - ug_description: Apache-2.0
   - uuv_simulator: Apache-2.0 (原始仓库: https://github.com/uuvsimulator/uuv_simulator)
   - dave: Apache-2.0 (原始仓库: https://github.com/Field-Robotics-Lab/dave)
 
-  注意: 本仓库包含对 uuv_simulator 和 dave 的修改版本。原始项目的版权归原作者所有。
+  ## 注意: 本仓库包含对 uuv_simulator 和 dave 的修改版本。原始项目的版权归原作者所有。
