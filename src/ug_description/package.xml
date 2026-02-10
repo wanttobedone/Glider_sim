@@ -19,6 +19,10 @@
   <depend>uuv_sensor_ros_plugins</depend>
   <depend>uuv_world_plugins</depend>
   <depend>ug_gazebo_plugins</depend>
+  <depend>ug_hardware_sim</depend>
+  <depend>ug_control</depend>
+  <depend>ug_viz</depend>
+  <depend>ug_msgs</depend>
 
   <export>
     <gazebo_ros gazebo_model_path="${prefix}/.."/>

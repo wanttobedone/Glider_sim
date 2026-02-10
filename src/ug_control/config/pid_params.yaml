@@ -1,0 +1,25 @@
+# PID参数
+# 初始值
+
+control_node:
+  namespace: ug_glider  #后续集群分组发布，目前单机
+  control_rate: 20.0     # 控制频率 [Hz]
+
+  # Pitch 电池位置
+  pitch:
+    kp: 0.5
+    ki: 0.0
+    kd: 0.1
+
+  # Heading 舵角
+  heading:
+    kp: 0.3
+    ki: 0.0
+    kd: 0.05
+
+  # Depth 油囊体积
+  depth:
+    kp: 0.001
+    ki: 0.0
+    kd: 0.0
+    neutral_volume: 0.0005  # 中性油量 [m^3]

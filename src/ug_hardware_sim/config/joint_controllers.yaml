@@ -1,0 +1,23 @@
+# ros_control 关节控制器配置
+# 使用 EffortJointInterface + PID 确保通过 SetForce 驱动关节
+# 避免 PositionJointInterface 的 SetPosition 导致速度重置问题
+
+# 关节状态发布器 (替代 HardwareSimPlugin 的 joint_states 发布)
+joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: 50
+
+# 电池滑块位置控制器 (10kg 质量 + damping=10.0)
+# 临界阻尼 D ≈ 2*sqrt(P*m) - joint_damping = 2*sqrt(800*10) - 10 ≈ 169
+# 取 D=150 略欠阻尼，I 先关闭避免积分飘移
+battery_joint_position_controller:
+  type: effort_controllers/JointPositionController
+  joint: ug_glider/battery_joint
+  pid: {p: 800.0, i: 0.0, d: 150.0, i_clamp: 10.0}
+
+# 尾舵位置控制器 (极轻质量 1e-6 kg, damping=0.5)
+# 质量极小，增益不需要太大
+rudder_joint_position_controller:
+  type: effort_controllers/JointPositionController
+  joint: ug_glider/rudder_joint
+  pid: {p: 5.0, i: 0.0, d: 1.0, i_clamp: 5.0}

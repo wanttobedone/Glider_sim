@@ -1,0 +1,50 @@
+<!--
+  UG-Sim-Control 完整仿真启动文件
+  启动顺序：Gazebo 环境 → 滑翔机模型(含硬件层插件) → 硬件参数 → 控制层 → 仪表盘
+-->
+<launch>
+  <arg name="namespace" default="ug_glider"/>
+  <arg name="x" default="0"/>
+  <arg name="y" default="0"/>
+  <arg name="z" default="-0.126"/>
+  <arg name="roll" default="0"/>
+  <arg name="pitch" default="0.0"/>
+  <arg name="yaw" default="0"/>
+  <arg name="debug" default="0"/>
+  <arg name="gui" default="true"/>
+  <arg name="paused" default="false"/>
+  <arg name="dashboard" default="true"/>
+  <arg name="control" default="false"/>  <!-- 手动调试时默认关闭，用 control:=true 启用 -->
+
+  <!-- 1. 启动 Gazebo + 滑翔机模型 -->
+  <include file="$(find ug_description)/launch/gazebo_dave_ocean.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+    <arg name="x" value="$(arg x)"/>
+    <arg name="y" value="$(arg y)"/>
+    <arg name="z" value="$(arg z)"/>
+    <arg name="roll" value="$(arg roll)"/>
+    <arg name="pitch" value="$(arg pitch)"/>
+    <arg name="yaw" value="$(arg yaw)"/>
+    <arg name="debug" value="$(arg debug)"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="paused" value="$(arg paused)"/>
+  </include>
+
+  <!-- 2. 加载硬件层参数到参数服务器 -->
+  <group ns="$(arg namespace)">
+    <rosparam file="$(find ug_hardware_sim)/config/hardware_params.yaml"
+              command="load" ns="hardware_sim"/>
+  </group>
+
+  <!-- 3. 上层控制（状态转换 + PID） -->
+  <include if="$(arg control)"
+           file="$(find ug_control)/launch/control.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+  </include>
+
+  <!-- 4. RQT 仪表盘 -->
+  <include if="$(arg dashboard)"
+           file="$(find ug_viz)/launch/dashboard.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+  </include>
+</launch>

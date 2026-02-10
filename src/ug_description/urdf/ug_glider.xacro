@@ -11,8 +11,6 @@
 
   <!-- 引入 UUV Simulator 公共宏 -->
   <xacro:include filename="$(find uuv_descriptions)/urdf/common.urdf.xacro"/>
-  <xacro:include filename="$(find uuv_gazebo_ros_plugins)/urdf/snippets.xacro"/>
-
   <!-- 引入本模型的各个组件文件，但先不用传感器，用仿真中的真值 -->
   <xacro:include filename="$(find ug_description)/urdf/ug_glider_base.xacro"/>
   <xacro:include filename="$(find ug_description)/urdf/ug_glider_gazebo.xacro"/>

@@ -1,0 +1,7 @@
+<library path="src">
+  <class name="ug_viz/GliderDashboard"
+         type="ug_viz.glider_dashboard.GliderDashboard"
+         base_class_type="rqt_gui_py::Plugin">
+    <description>水下滑翔机控制仪表盘</description>
+  </class>
+</library>

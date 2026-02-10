@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ug_hardware_sim</name>
+  <version>0.1.0</version>
+  <description>水下滑翔机硬件抽象仿真层 - Gazebo 模型插件</description>
+  <maintainer email="dev@ug-sim.org">UG-Sim Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>ug_msgs</depend>
+  <depend>gazebo_ros</depend>
+  <depend>gazebo_dev</depend>
+
+  <export>
+    <gazebo_ros plugin_path="${prefix}/lib"/>
+  </export>
+</package>

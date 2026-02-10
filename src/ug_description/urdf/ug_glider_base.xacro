@@ -13,7 +13,7 @@
   <!-- 参数定义  -->
 
   <!-- 船体参数 -->
-  <xacro:property name="hull_mass" value="20.26"/>           <!-- 干重 [kg]，目前假设质量等于（体积-500cc）*海水密度-舵-固定翼（assume） -->
+  <xacro:property name="hull_mass" value="24.485"/>           <!-- 干重 [kg]，目前假设质量等于（体积-500cc）*海水密度-舵-固定翼（assume） -->
   <xacro:property name="hull_length" value="1.252"/>          <!-- 总长度 [m] -->
   <xacro:property name="hull_diameter" value="0.255"/>       <!-- 船体直径 [m] -->
 
@@ -32,16 +32,16 @@
 
   <!-- 电池滑块参数-->  <!--注意现在配平尚有问题-->
   <xacro:property name="battery_mass" value="10.0"/>        <!-- assume的电池包质量 [kg] -->
-  <xacro:property name="battery_travel" value="0.012"/>      <!-- 最大行程半径 [m] -->
-  <xacro:property name="battery_x_origin" value="-0.1115"/>     <!-- 电池中立位置 [m]-0.12385 -->
+  <xacro:property name="battery_travel" value="0.03385"/>      <!-- 最大行程半径 [m] -->
+  <xacro:property name="battery_x_origin" value="0.0"/>     <!-- 先assume电池质心与hull质心重合，-0.1115电池中立位置 [m]-0.12385 -->
   <!--暂时值，目前与800cc配平-->
 
   <!-- 方向舵参数 -->
-  <xacro:property name="rudder_mass" value="0.225"/>          <!-- 舵质量 [kg] -->
+  <xacro:property name="rudder_mass" value="1.0e-6"/>          <!-- 舵质量都在hull里，为了浮力和重力统一，避免冗余力矩 -->
   <xacro:property name="rudder_max_angle" value="0.52"/>    <!-- assume最大偏转角 [rad] (~30度) -->
 
   <!-- 固定翼参数 -->
-  <xacro:property name="wing_mass" value="4.0"/>            <!-- assume翼组件质量 [kg] -->
+  <xacro:property name="wing_mass" value="1.0e-6"/>            <!-- 翼组件质量都在hull里，为了浮力和重力统一，避免冗余力矩 -->
   <xacro:property name="wing_x" value="-0.325"/>            <!-- 翼位置X [m] -->
   <xacro:property name="wing_z" value="0.15"/>              <!-- 翼位置Z [m] -->
 
@@ -100,7 +100,7 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <box size="0.3 0.1 0.08"/>
+          <box size="0.03 0.01 0.008"/>
         </geometry>
       </collision>
     </link>
@@ -108,7 +108,7 @@
     <joint name="${namespace}/battery_joint" type="prismatic">
       <parent link="${namespace}/base_link"/>
       <child link="${namespace}/battery_link"/>
-      <origin xyz="${battery_x_origin} 0 0" rpy="0 0 0"/>
+      <origin xyz="${battery_x_origin} 0 -0.05" rpy="0 0 0"/>  <!-- assume电池z向质心与hull一样 -->
       <axis xyz="1 0 0"/>  <!-- 沿X轴滑动 (前后方向)，后续再添加roll控制 -->
       <limit lower="${-battery_travel}" upper="${battery_travel}" effort="100" velocity="0.05"/>
       <dynamics damping="10.0" friction="1.0"/>

@@ -1,63 +1,21 @@
 <?xml version="1.0"?>
 <!--
-  水下滑翔机 - 执行器定义 (ros_control 接口)
-  包含：电池滑块传动、方向舵传动
+  水下滑翔机 - 执行器层定义
+  HardwareSimPlugin 直接驱动关节 (SetPosition + preserveWorldVelocity)
+  参考 UUV FinPlugin 的运动学设定方式
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- 引入推进器宏 (必须在宏外部) -->
-  <xacro:include filename="$(find uuv_gazebo_ros_plugins)/urdf/thruster_snippets.xacro"/>
-
-  <!-- 宏定义  -->
-
   <xacro:macro name="ug_glider_actuators" params="namespace">
 
-    <!--电池滑块传动 -->
-    <transmission name="${namespace}/battery_trans">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${namespace}/battery_joint">
-        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="${namespace}/battery_actuator">
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission>
-
-    <!-- 方向舵传动 (艏摇控制) -->
-    <transmission name="${namespace}/rudder_trans">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${namespace}/rudder_joint">
-        <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="${namespace}/rudder_actuator">
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission>
-
-    <!-- Gazebo ros_control 插件 -->
+    <!-- 硬件抽象仿真插件 -->
     <gazebo>
-      <plugin name="${namespace}_gazebo_ros_control" filename="libgazebo_ros_control.so">
-        <robotNamespace>${namespace}</robotNamespace>
-        <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
-        <legacyModeNS>true</legacyModeNS>
+      <plugin name="${namespace}_hardware_sim" filename="libhardware_sim_plugin.so">
+        <namespace>${namespace}</namespace>
+        <battery_joint>${namespace}/battery_joint</battery_joint>
+        <rudder_joint>${namespace}/rudder_joint</rudder_joint>
       </plugin>
     </gazebo>
-
-    <!-- 浮力系统 (VBS控制) -->
-    <!-- 已迁移到 ug_glider_gazebo.xacro 中的 libbuoyancy_engine_plugin.so -->
-    <!-- 基于物理的油囊模型，通过控制体积产生浮力差 -->
-
-    <!-- 推进器等效浮力方案 -->
-    <!-- 用一个垂直螺旋桨的力来等效浮力，控制律需要映射节点 -->
-    <!-- <xacro:thruster_module_first_order_basic_fcn_macro
-      namespace="${namespace}"
-      thruster_id="0"
-      mesh_filename="package://ug_description/meshes/ug_oil.stl"
-      dyn_time_constant="0.5"
-      rotor_constant="10.08">
-      <origin xyz="-0.361 0 -0.052" rpy="0 ${-pi/2} 0"/>
-    </xacro:thruster_module_first_order_basic_fcn_macro> -->
-    
 
   </xacro:macro>
 

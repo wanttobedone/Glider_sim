@@ -11,7 +11,7 @@
   <xacro:property name="fluid_density" value="1028.0"/>     <!-- 海水密度 [kg/m^3] -->
 
   <!-- 浮力参数 -->
-  <xacro:property name="hull_volume" value="0.0336"/>        <!-- 排水体积，扣除500cc油馕体积 [m^3] -->
+  <xacro:property name="hull_volume" value="0.033547"/>       <!-- 排水体积 [m^3]，由 total_mass/fluid_density = 34.486/1028 得出，确保中性油量时零净浮力 -->
   <xacro:property name="cob_x" value="0.0"/>                <!-- 浮心位置 (原点) -->
   <xacro:property name="cob_y" value="0.0"/>
   <xacro:property name="cob_z" value="0.0"/>
@@ -20,7 +20,7 @@
   <xacro:property name="oil_neutral_volume" value="0.0005"/>    <!-- 中性浮力时油囊体积 500cc [m^3] -->
   <xacro:property name="oil_min_volume" value="0.0"/>           <!-- 油囊最小体积 0cc [m^3] -->
   <xacro:property name="oil_max_volume" value="0.001"/>         <!-- 油囊最大体积 1000cc [m^3] -->
-  <xacro:property name="oil_pump_rate" value="0.0001"/>         <!-- 油泵流速 100cc/s [m^3/s] -->
+  <!-- 油泵流速已移至 ug_hardware_sim 参数配置 -->
   <xacro:property name="oil_bladder_x" value="-0.361"/>         <!-- 油囊位置x（尾部）[m] -->
   <xacro:property name="oil_bladder_y" value="-0.0005"/>        <!-- 油囊位置y [m] -->
   <xacro:property name="oil_bladder_z" value="-0.05221"/>       <!-- 油囊位置z（浮心下方）[m] -->
@@ -181,16 +181,13 @@
         <neutral_volume>${oil_neutral_volume}</neutral_volume>
         <min_volume>${oil_min_volume}</min_volume>
         <max_volume>${oil_max_volume}</max_volume>
-        <initial_volume>0.0008</initial_volume>  <!-- 启动时油囊初始体积 500cc -->
-
-        <!-- 油泵动态 -->
-        <pump_rate>${oil_pump_rate}</pump_rate>
+        <initial_volume>0.0005</initial_volume>  <!-- 启动时油囊初始体积 500cc -->
 
         <!-- 油囊力作用点（相对于base_link，产生俯仰力矩）-->
         <bladder_position>${oil_bladder_x} ${oil_bladder_y} ${oil_bladder_z}</bladder_position>
 
-        <!-- ROS话题 -->
-        <command_topic>buoyancy_engine/cmd_volume</command_topic>
+        <!-- ROS话题（接收 ug_hardware_sim 发布的实际体积）-->
+        <command_topic>buoyancy_engine/set_volume</command_topic>
         <status_topic>buoyancy_engine/status</status_topic>
       </plugin>
     </gazebo>
