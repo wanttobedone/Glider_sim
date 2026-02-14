@@ -1,0 +1,33 @@
+# ug_hardware_sim 执行机构动力学参数
+# 所有参数均可在 launch 文件中覆盖
+
+# 电池滑块
+battery:
+  max_speed: 0.01          # 最大移动速度 [m/s]
+  min_position: -0.03385   # 最小位置 [m]
+  max_position: 0.03385    # 最大位置 [m]
+  initial_position: 0.0    # 初始位置 [m]
+
+# 油囊
+ballast:
+  pump_rate: 0.0001        # 泵速率 [m^3/s] = 100cc/s
+  min_volume: 0.0          # 最小体积 [m^3]
+  max_volume: 0.001        # 最大体积 [m^3]
+  initial_volume: 0.0005   # 初始体积 [m^3] = 500cc (中性)
+
+# 尾舵
+rudder:
+  alpha: 0.3               # 一阶滞后系数 (0~1, 越小滞后越大)
+  min_angle: -0.52         # 最小舵角 [rad]
+  max_angle: 0.52          # 最大舵角 [rad]
+  initial_angle: 0.0       # 初始舵角 [rad]
+
+# 看门狗，timeout <= 0 时禁用，方便 rostopic pub 调试
+watchdog:
+  timeout: -1.0            # 指令超时时间 [s]，<= 0 禁用看门狗
+
+# 安全状态，看门狗触发时的命令值
+safe_state:
+  battery_position: 0.0    # 电池归中
+  ballast_volume: 0.0005   # 油囊中性
+  rudder_angle: 0.0        # 舵角归零

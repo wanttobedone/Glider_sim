@@ -1,0 +1,158 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /RobotModel1
+        - /Markers1
+        - /Actual Path1
+      Splitter Ratio: 0.5
+  - Class: rviz/Views
+    Name: Views
+
+Visualization Manager:
+  Class: ""
+  Displays:
+    # ── Grid ──
+    - Class: rviz/Grid
+      Name: Grid
+      Plane Cell Count: 20
+      Cell Size: 1
+      Color: 100; 100; 100
+      Line Style:
+        Line Width: 0.02
+        Value: Lines
+      Reference Frame: <Fixed Frame>
+      Value: true
+
+    # ── Robot Model ──
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Description Topic: ""
+      Enabled: true
+      Name: RobotModel
+      Robot Description: /ug_glider/robot_description
+      TF Prefix: ""
+      Value: true
+
+    # ── TF (disabled by default, enable for debugging) ──
+    - Class: rviz/TF
+      Enabled: false
+      Frame Timeout: 15
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Value: false
+
+    # ── Viz Markers (attitude arrow, velocity arrow, target depth, water surface, target heading) ──
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /ug_glider/viz/markers
+      Name: Markers
+      Queue Size: 1
+      Value: true
+
+    # ── Status Text Overlay ──
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /ug_glider/viz/status_text
+      Name: Status Text
+      Queue Size: 1
+      Value: true
+
+    # ── Actual Trajectory (green) ──
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 50; 255; 50
+      Enabled: true
+      Line Style: Lines
+      Line Width: 0.03
+      Name: Actual Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 1
+      Topic: /ug_glider/viz/actual_path
+      Value: true
+
+    # ── Target Trajectory (red dashed - shown as thinner red line) ──
+    - Alpha: 0.8
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 255; 50; 50
+      Enabled: true
+      Line Style: Lines
+      Line Width: 0.02
+      Name: Target Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 1
+      Topic: /ug_glider/viz/target_path
+      Value: true
+
+    # ── Buoyancy Force (debug, from buoyancy engine plugin) ──
+    - Alpha: 1
+      Class: rviz/WrenchStamped
+      Enabled: false
+      Force Arrow Scale: 0.1
+      Force Color: 204; 51; 51
+      Name: Buoyancy Force
+      Topic: /ug_glider/buoyancy_engine/applied_force
+      Torque Arrow Scale: 0.1
+      Torque Color: 204; 204; 51
+      Value: false
+
+  Enabled: true
+  Fixed Frame: world
+  Global Options:
+    Background Color: 48; 48; 48
+    Default Light: true
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 8
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.06
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: -1
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.01
+      Pitch: 0.5
+      Target Frame: ug_glider/base_link
+      Yaw: 0.8
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 800
+  Width: 1200
+  Views:
+    collapsed: true

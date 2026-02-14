@@ -36,3 +36,5 @@ src/my_glider_sim/
 Thumbs.db
 
 src/ug_description/scripts/calculate_hull_cog.py
+
+src/glider_sim/ug_viz/scripts/glider_viz_node

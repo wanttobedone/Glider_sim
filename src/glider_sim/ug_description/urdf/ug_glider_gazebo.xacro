@@ -1,0 +1,217 @@
+<?xml version="1.0"?>
+<!--
+  必须的Gazebo仿真插件
+  包含Fossen水动力模型、浮力、翼面升力/阻力、方向舵升力/阻力
+  uuv_sim的fin插件不适配Gazebo 11，目前使用Gazebo自带插件，后续自己开发
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 水动力参数 (TODO: 填入实际数据) -->
+  <!-- 流体属性，后续考虑要不要随深度修改 -->
+  <xacro:property name="fluid_density" value="1028.0"/>     <!-- 海水密度 [kg/m^3] -->
+
+  <!-- 浮力参数 -->
+  <xacro:property name="hull_volume" value="0.033547"/>       <!-- 排水体积 [m^3]，由 total_mass/fluid_density = 34.486/1028 得出，确保中性油量时零净浮力 -->
+  <xacro:property name="cob_x" value="0.0"/>                <!-- 浮心位置 (原点) -->
+  <xacro:property name="cob_y" value="0.0"/>
+  <xacro:property name="cob_z" value="0.0"/>
+
+  <!-- 油囊（浮力引擎）参数 -->
+  <xacro:property name="oil_neutral_volume" value="0.0005"/>    <!-- 中性浮力时油囊体积 500cc [m^3] -->
+  <xacro:property name="oil_min_volume" value="0.0"/>           <!-- 油囊最小体积 0cc [m^3] -->
+  <xacro:property name="oil_max_volume" value="0.001"/>         <!-- 油囊最大体积 1000cc [m^3] -->
+  <!-- 油泵流速已移至 ug_hardware_sim 参数配置 -->  <!--为方便演示，暂且设置作用点为浮力中心-->
+  <xacro:property name="oil_bladder_x" value="0.0"/>         <!-- 油囊位置x（尾部）-0.361[m] -->
+  <xacro:property name="oil_bladder_y" value="0.000"/>        <!-- 油囊位置y [m] -->
+  <xacro:property name="oil_bladder_z" value="0.0"/>       <!-- 油囊位置z（浮心下方）-0.05221[m] -->
+
+  <!-- Assume附加质量矩阵 (6x6对角近似) -->
+  <!-- TODO: 来自水动力分析或CFD -->
+  <xacro:property name="Ma_11" value="3.0"/>                <!-- 纵荡附加质量，x [kg] -->
+  <xacro:property name="Ma_22" value="40.0"/>               <!-- 横荡附加质量,y [kg] -->
+  <xacro:property name="Ma_33" value="40.0"/>               <!-- 垂荡附加质量,z [kg] -->
+  <xacro:property name="Ma_44" value="0.5"/>                <!-- 横滚附加惯性矩, roll [kg*m^2] -->
+  <xacro:property name="Ma_55" value="10.0"/>               <!-- 纵摇附加惯性矩, pitch [kg*m^2] -->
+  <xacro:property name="Ma_66" value="10.0"/>               <!-- 艏摇附加惯性矩, yaw[kg*m^2] -->
+
+  <!-- Assume线性阻尼矩阵 (6x6对角) -->
+  <!-- TODO: 来自CFD -->
+  <xacro:property name="Dl_11" value="-2.0"/>               <!-- 纵荡阻尼 [N*s/m] -->
+  <xacro:property name="Dl_22" value="-25.0"/>              <!-- 横荡阻尼 [N*s/m] -->
+  <xacro:property name="Dl_33" value="-25.0"/>              <!-- 垂荡阻尼 [N*s/m] -->
+  <xacro:property name="Dl_44" value="-0.5"/>               <!-- 横滚阻尼 [N*m*s/rad] -->
+  <xacro:property name="Dl_55" value="-5.0"/>              <!-- 纵摇阻尼 [N*m*s/rad] -->
+  <xacro:property name="Dl_66" value="-5.0"/>              <!-- 艏摇阻尼 [N*m*s/rad] -->
+
+  <!-- 二次阻尼矩阵 (6x6对角) -->
+  <xacro:property name="Dq_11" value="-5.0"/>              <!-- 纵荡二次阻尼 [N*s^2/m^2] -->
+  <xacro:property name="Dq_22" value="-160.0"/>             <!-- 横荡二次阻尼 [N*s^2/m^2] -->
+  <xacro:property name="Dq_33" value="-160.0"/>             <!-- 垂荡二次阻尼 [N*s^2/m^2] -->
+  <xacro:property name="Dq_44" value="-5.0"/>               <!-- 横滚二次阻尼 -->
+  <xacro:property name="Dq_55" value="-50.0"/>              <!-- 纵摇二次阻尼 -->
+  <xacro:property name="Dq_66" value="-50.0"/>              <!-- 艏摇二次阻尼 -->
+
+  <!-- 固定翼升力/阻力参数，假设单侧等效NACA0012翼型，Re=10，000 -->  <!--失速角为10.75以上，控制里写约束-->
+  <!--参考面积每侧为两倍单翼参考面积-->
+  <xacro:property name="wing_area" value="0.035"/>           <!-- 翼面积,单个翼的投影面积 [m^2] -->
+  <xacro:property name="wing_lift_coef" value="7.04"/>      <!-- 升力系数斜率 [1/rad] -->
+  <xacro:property name="wing_drag_coef" value="0.017"/>      <!-- 阻力系数 -->
+
+  <!-- 方向舵升力/阻力参数 -->
+  <xacro:property name="rudder_area" value="0.0168"/>         <!-- 舵面积 [m^2] -->
+  <xacro:property name="rudder_lift_coef" value="7.04"/>     <!-- 升力系数斜率 -->
+  <xacro:property name="rudder_drag_coef" value="0.017"/>     <!-- 阻力系数 -->
+
+  <!-- 宏定义 -->
+
+  <xacro:macro name="ug_glider_gazebo" params="namespace debug">
+    <!-- 水下插件 (Fossen水动力模型) -->
+    <gazebo>
+      <plugin name="${namespace}_uuv_plugin" filename="libuuv_underwater_object_ros_plugin.so">
+        <fluid_density>${fluid_density}</fluid_density>
+        <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
+        <debug>${debug}</debug>
+
+        <link name="${namespace}/base_link">
+          <neutrally_buoyant>0</neutrally_buoyant>
+          <volume>${hull_volume}</volume>
+          <center_of_buoyancy>${cob_x} ${cob_y} ${cob_z}</center_of_buoyancy>
+
+          <!-- 用于稳心恢复力矩计算的包围盒近似 -->
+          <box>
+            <width>0.255</width>   <!-- Y方向 [m] -->
+            <length>1.252</length>  <!-- X方向 [m] -->
+            <height>0.255</height> <!-- Z方向 [m] -->
+          </box>
+
+          <hydrodynamic_model>
+            <type>fossen</type>
+
+            <!-- 附加质量矩阵 [6x6] -->
+            <added_mass>
+              ${Ma_11}  0        0        0        0        0
+              0         ${Ma_22} 0        0        0        0
+              0         0        ${Ma_33} 0        0        0
+              0         0        0        ${Ma_44} 0        0
+              0         0        0        0        ${Ma_55} 0
+              0         0        0        0        0        ${Ma_66}
+            </added_mass>
+
+            <!-- 线性阻尼矩阵 [6x6] -->
+            <linear_damping>
+              ${Dl_11}  0        0        0        0        0
+              0         ${Dl_22} 0        0        0        0
+              0         0        ${Dl_33} 0        0        0
+              0         0        0        ${Dl_44} 0        0
+              0         0        0        0        ${Dl_55} 0
+              0         0        0        0        0        ${Dl_66}
+            </linear_damping>
+
+            <!-- 二次阻尼矩阵 [6x6] -->
+            <quadratic_damping>
+              ${Dq_11}  0        0        0        0        0
+              0         ${Dq_22} 0        0        0        0
+              0         0        ${Dq_33} 0        0        0
+              0         0        0        ${Dq_44} 0        0
+              0         0        0        0        ${Dq_55} 0
+              0         0        0        0        0        ${Dq_66}
+            </quadratic_damping>
+
+          </hydrodynamic_model>
+        </link>
+      </plugin>
+    </gazebo>
+
+    <!-- 调取仿真器真值，p3d插件，省去了状态估计，后续用传感器 -->
+    <gazebo>
+      <plugin name="p3d_base_controller" filename="libgazebo_ros_p3d.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <alwaysOn>true</alwaysOn>
+        <updateRate>50.0</updateRate>
+        <bodyName>${namespace}/base_link</bodyName>
+        <topicName>ground_truth/pose</topicName>
+        <gaussianNoise>0.0</gaussianNoise>
+        <frameName>world</frameName>
+        <xyzOffsets>0 0 0</xyzOffsets>
+        <rpyOffsets>0 0 0</rpyOffsets>
+      </plugin>
+    </gazebo>
+
+    <!-- 固定翼升力/阻力 - 使用 Gazebo 内置 LiftDrag 插件 -->
+    <!-- libuuv_fin_ros_plugin.so 在 Gazebo 11 + Intel NUC环境下会崩溃 -->
+    <!-- 挂在 base_link，cp 相对于船体中心 -->
+    <xacro:if value="true">  <!--调试用，是否禁用wings-->
+      <gazebo>
+        <plugin name="${namespace}_wing_lift" filename="libLiftDragPlugin.so">
+          <air_density>${fluid_density}</air_density>
+          <cla>${wing_lift_coef}</cla>
+          <cda>${wing_drag_coef}</cda>
+          <cp>-0.325 0 0.15</cp>
+          <forward>1 0 0</forward>
+          <upward>0 0 1</upward>
+          <area>${wing_area}</area>
+          <link_name>${namespace}/base_link</link_name>
+        </plugin>
+      </gazebo>
+    </xacro:if>
+
+    <!-- 方向舵升力/阻力 - 挂在 base_link，通过 control_joint 读取舵角 -->
+    <gazebo>
+      <plugin name="${namespace}_rudder_lift" filename="libLiftDragPlugin.so">
+        <air_density>${fluid_density}</air_density>
+        <cla>${rudder_lift_coef}</cla>
+        <cda>${rudder_drag_coef}</cda>
+        <alpha_stall>0.6</alpha_stall>
+        <link_name>${namespace}/base_link</link_name>
+        <cp>-0.417 0 0.09</cp>
+        <forward>1 0 0</forward>
+        <upward>0 1 0</upward>
+        <area>${rudder_area}</area>
+        <control_joint_name>${namespace}/rudder_joint</control_joint_name>
+        <control_joint_rad_to_cl>2.0</control_joint_rad_to_cl>
+      </plugin>
+    </gazebo>
+
+    <!-- 浮力引擎（油囊）插件 -->
+    <!-- 控制油囊体积产生浮力差，驱动滑翔机升沉 -->
+    <!-- 订阅: /${namespace}/buoyancy_engine/cmd_volume (std_msgs/Float64) -->
+    <!-- 发布: /${namespace}/buoyancy_engine/status (BuoyancyEngineStatus) -->
+    <gazebo>
+      <plugin name="${namespace}_buoyancy_engine" filename="libbuoyancy_engine_plugin.so">
+        <namespace>${namespace}</namespace>
+        <link_name>base_link</link_name>
+
+        <!-- 流体参数 -->
+        <fluid_density>${fluid_density}</fluid_density>
+
+        <!-- 油囊体积参数 -->
+        <neutral_volume>${oil_neutral_volume}</neutral_volume>
+        <min_volume>${oil_min_volume}</min_volume>
+        <max_volume>${oil_max_volume}</max_volume>
+        <initial_volume>0.0005</initial_volume>  <!-- 启动时油囊初始体积 500cc -->
+
+        <!-- 油囊力作用点（相对于base_link，产生俯仰力矩）-->
+        <bladder_position>${oil_bladder_x} ${oil_bladder_y} ${oil_bladder_z}</bladder_position>
+
+        <!-- ROS话题（接收 ug_hardware_sim 发布的实际体积）-->
+        <command_topic>buoyancy_engine/set_volume</command_topic>
+        <status_topic>buoyancy_engine/status</status_topic>
+      </plugin>
+    </gazebo>
+
+    <!-- Gazebo 材质颜色 -->
+    <gazebo reference="${namespace}/base_link">
+      <material>Gazebo/Yellow</material>
+    </gazebo>
+
+    <gazebo reference="${namespace}/rudder_link">
+      <material>Gazebo/Orange</material>
+    </gazebo>
+
+    <gazebo reference="${namespace}/battery_link">
+      <material>Gazebo/Blue</material>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

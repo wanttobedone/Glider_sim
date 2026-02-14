@@ -187,6 +187,10 @@ void UnderwaterObjectROSPlugin::Load(gazebo::physics::ModelPtr _parent,
   this->nedTransform.transform.rotation.y = quat.y();
   this->nedTransform.transform.rotation.z = quat.z();
   this->nedTransform.transform.rotation.w = quat.w();
+
+  // 静态变换只需发布一次
+  this->nedTransform.header.stamp = ros::Time::now();
+  this->tfStaticBroadcaster.sendTransform(this->nedTransform);
 }
 
 /////////////////////////////////////////////////
@@ -203,9 +207,6 @@ void UnderwaterObjectROSPlugin::Reset()
 void UnderwaterObjectROSPlugin::Update(const gazebo::common::UpdateInfo &_info)
 {
   UnderwaterObjectPlugin::Update(_info);
-
-  this->nedTransform.header.stamp = ros::Time::now();
-  this->tfBroadcaster.sendTransform(this->nedTransform);
 }
 
 /////////////////////////////////////////////////

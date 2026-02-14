@@ -37,7 +37,7 @@
 #include <uuv_gazebo_ros_plugins_msgs/SetFloat.h>
 #include <uuv_gazebo_ros_plugins_msgs/GetFloat.h>
 #include <geometry_msgs/TransformStamped.h>
-#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2/LinearMath/Quaternion.h>
 
 #include <map>
@@ -226,7 +226,7 @@ namespace uuv_simulator_ros
 
     private: geometry_msgs::TransformStamped nedTransform;
 
-    private: tf2_ros::TransformBroadcaster tfBroadcaster;
+    private: tf2_ros::StaticTransformBroadcaster tfStaticBroadcaster;
   };
 }
 

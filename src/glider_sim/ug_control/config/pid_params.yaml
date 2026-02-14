@@ -1,0 +1,40 @@
+# PID参数,两种控制模式: MANUAL(0), CASCADE(1)
+# 这些参数通过 <rosparam> 在 node 内部加载，不能添加 node name 作为顶层 key，否则会产生双重嵌套
+
+namespace: ug_glider
+control_rate: 2.0              # 控制频率Hz
+control_mode: 1                # 0=MANUAL调试, 1=CASCADE级联
+
+# 内环 Pitch PID，两种模式共用
+# 输出电池位置[m], 范围 [-0.03385, +0.03385]control_node定义
+pitch:
+  kp: 0.1
+  ki: 0.00
+  kd: 0.05
+
+# Heading PID，共用
+# 输出舵角[rad], 范围 [-0.52, +0.52]在control_node定义
+heading:
+  kp: 0.03
+  ki: 0.0
+  kd: 0.05
+
+# 手动模式调试，depth对应油囊体积
+# 输出油囊体积偏移[m³], 叠加在neutral_volume上
+depth:
+  kp: 0.0001
+  ki: 0.0
+  kd: 0.0
+  neutral_volume: 0.0005       # 中性油量500cc
+
+# 级联控制参数
+cascade:
+  # 外环: 深度误差，驱动目标俯仰角
+  depth_outer:
+    kp: 0.03                   # [rad/m] 1m误差 → 0.03rad(~1.7°)
+    ki: 0.01                   # [rad/(m·s)] 消除稳态深度误差
+    kd: 0.1                    # [rad·s/m] 抑制深度振荡
+    max_pitch: 0.5             # [rad] 外环输出限幅 (~30°)
+  # 油囊前馈
+  ff_gain: 0.0002              # [m³/m] 每米深度误差对应的油量偏移
+  ff_deadzone: 0.1             # [m] 前馈阈值，±0.1m内不动油囊

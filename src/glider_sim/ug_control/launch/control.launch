@@ -1,0 +1,18 @@
+<!--
+  ug_control 控制层启动文件
+  启动状态转换节点，PID 控制器
+-->
+<launch>
+  <arg name="namespace" default="ug_glider"/>
+
+  <!-- 状态转换，封装状态估计话题-->
+  <node name="state_converter" pkg="ug_control" type="state_converter_node" output="screen">
+    <param name="namespace" value="$(arg namespace)"/>
+    <param name="pose_topic" value="/$(arg namespace)/ground_truth/pose"/>
+  </node>
+
+  <!-- PID控制器 -->
+  <node name="control_node" pkg="ug_control" type="control_node" output="screen">
+    <rosparam file="$(find ug_control)/config/pid_params.yaml" command="load"/>
+  </node>
+</launch>

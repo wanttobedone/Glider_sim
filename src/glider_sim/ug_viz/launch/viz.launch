@@ -1,0 +1,19 @@
+<!--
+  滑翔机 RViz 可视化启动文件
+  启动: glider_viz_node (marker发布) + RViz
+-->
+<launch>
+  <arg name="namespace" default="ug_glider"/>
+
+  <!-- Viz Marker 发布节点 -->
+  <node name="glider_viz_node" pkg="ug_viz" type="glider_viz_node" output="screen">
+    <param name="namespace" value="$(arg namespace)"/>
+    <param name="viz_rate" value="10.0"/>
+    <param name="max_path_points" value="5000"/>
+  </node>
+
+  <!-- RViz -->
+  <node name="rviz" pkg="rviz" type="rviz"
+        args="-d $(find ug_description)/config/glider.rviz"
+        output="screen"/>
+</launch>

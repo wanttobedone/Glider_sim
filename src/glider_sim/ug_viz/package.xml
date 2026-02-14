@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>ug_viz</name>
+  <version>0.1.0</version>
+  <description>水下滑翔机可视化: C++ RViz Marker节点 + RQT 仪表盘</description>
+  <maintainer email="dev@ug-sim.org">UG-Sim Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- C++ 依赖 -->
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>visualization_msgs</build_depend>
+  <build_depend>tf2_ros</build_depend>
+  <build_depend>ug_msgs</build_depend>
+
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>ug_msgs</exec_depend>
+
+  <!-- Python RQT 仪表盘依赖 -->
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>rqt_gui</exec_depend>
+  <exec_depend>rqt_gui_py</exec_depend>
+  <exec_depend>python3-pyqt5</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+
+  <export>
+    <rqt_gui plugin="${prefix}/resource/plugin.xml"/>
+  </export>
+</package>

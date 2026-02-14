@@ -1,0 +1,190 @@
+<?xml version="1.0"?>
+<!--
+  水下滑翔机 - 物理结构定义 (Links 和 Joints) 包含：船体、电池滑块、方向舵、固定翼
+  后续可能尾舵需要加浮力插件或者其它，尾舵现重力在位置上但是浮力在hull中心上
+  坐标系定义：
+  - X轴：前进方向 (正向 = 船艏)
+  - Y轴：右舷方向 (正向 = 右侧)
+  - Z轴：向上 (正向 = 水面方向)
+  - 原点：浮心 (COB)
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 参数定义  -->
+
+  <!-- 船体参数 -->
+  <xacro:property name="hull_mass" value="29.485"/>           <!-- 干重 [kg]，目前假设质量等于（体积-500cc）*海水密度-舵-固定翼（assume） -->
+  <xacro:property name="hull_length" value="1.252"/>          <!-- 总长度 [m] -->
+  <xacro:property name="hull_diameter" value="0.255"/>       <!-- 船体直径 [m] -->
+
+  <!-- 重心相对于浮心(原点)的偏移，assume在浮心下0.05m -->
+  <xacro:property name="cog_x" value="0.0"/>                <!-- 重心X偏移 [m] -->
+  <xacro:property name="cog_y" value="0.0"/>                <!-- 重心Y偏移 [m] -->
+  <xacro:property name="cog_z" value="-0.05"/>              <!-- 重心Z偏移 [m] (负值=低于浮心) -->
+
+  <!-- 船体惯性矩 -->
+  <xacro:property name="hull_ixx" value="0.165"/>             <!-- Assume横滚惯性矩 [kg*m^2] -->
+  <xacro:property name="hull_ixy" value="0.0"/>
+  <xacro:property name="hull_ixz" value="0.0"/>
+  <xacro:property name="hull_iyy" value="2.8"/>            <!-- Assume纵摇惯性矩 [kg*m^2] -->
+  <xacro:property name="hull_iyz" value="0.0"/>
+  <xacro:property name="hull_izz" value="2.8"/>            <!-- Assume艏摇惯性矩 [kg*m^2] -->
+
+  <!-- 电池滑块参数-->  <!--目前方便配平起见把电池重心调在与hull重心一致位置-->
+  <xacro:property name="battery_mass" value="5.0"/>        <!-- assume的电池包质量 [kg] -->
+  <xacro:property name="battery_travel" value="0.03385"/>      <!-- 最大行程半径 [m] -->
+  <xacro:property name="battery_x_origin" value="0.0"/>     <!-- 先assume电池质心与hull质心重合，-0.1115电池中立位置 [m]-0.12385 -->
+
+  <!-- 方向舵参数 --> <!--不要带质量，只给baselink传力-->
+  <xacro:property name="rudder_mass" value="1.0e-6"/>          <!-- 舵质量都在hull里，为了浮力和重力统一，避免冗余力矩 -->
+  <xacro:property name="rudder_max_angle" value="0.52"/>    <!-- assume最大偏转角 [rad] (~30度) -->
+
+  <!-- 固定翼参数 -->
+  <xacro:property name="wing_mass" value="1.0e-6"/>            <!-- 翼组件质量都在hull里，为了浮力和重力统一，避免冗余力矩 -->
+  <xacro:property name="wing_x" value="-0.325"/>            <!-- 翼位置X [m] -->
+  <xacro:property name="wing_z" value="0.15"/>              <!-- 翼位置Z [m] -->
+
+  <!-- 网格文件路径 -->
+  <xacro:property name="hull_mesh" value="package://ug_description/meshes/UG_hull.stl"/>
+  <xacro:property name="rudder_mesh" value="package://ug_description/meshes/UG_steer.stl"/>
+
+  <!-- 宏定义 -->
+  <xacro:macro name="ug_glider_base" params="namespace">
+
+    <!-- 机体 (base_link)-->
+    <link name="${namespace}/base_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${hull_mesh}" scale="1 1 1"/>
+        </geometry>
+        <material name="glider_yellow">
+          <color rgba="1.0 0.9 0.0 1.0"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${hull_mesh}" scale="1 1 1"/>
+        </geometry>
+      </collision>
+
+      <inertial>
+        <mass value="${hull_mass}"/>
+        <origin xyz="${cog_x} ${cog_y} ${cog_z}" rpy="0 0 0"/>
+        <inertia
+          ixx="${hull_ixx}" ixy="${hull_ixy}" ixz="${hull_ixz}"
+          iyy="${hull_iyy}" iyz="${hull_iyz}" izz="${hull_izz}"/>
+      </inertial>
+    </link>
+
+    <!-- 电池滑块，目前只能前后移动 -->
+    <link name="${namespace}/battery_link">
+      <inertial>
+        <mass value="${battery_mass}"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+      </inertial>
+      <!-- 调试用可视化 (小方块表示电池包) -->
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.3 0.1 0.08"/>
+        </geometry>
+        <material name="battery_blue">
+          <color rgba="0.2 0.2 0.8 0.8"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.03 0.01 0.008"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${namespace}/battery_joint" type="prismatic">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/battery_link"/>
+      <origin xyz="${battery_x_origin} 0 -0.05" rpy="0 0 0"/>  <!-- assume电池z向质心与hull一样 -->
+      <axis xyz="1 0 0"/>  <!-- 沿X轴滑动 (前后方向)，后续再添加roll控制 -->
+      <limit lower="${-battery_travel}" upper="${battery_travel}" effort="100" velocity="0.05"/>
+      <dynamics damping="10.0" friction="1.0"/>
+    </joint>
+
+    <!-- 尾舵  -->
+    <link name="${namespace}/rudder_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 ${pi}"/>
+        <geometry>
+          <mesh filename="${rudder_mesh}" scale="1 1 1"/>
+        </geometry>
+        <material name="rudder_orange">
+          <color rgba="1.0 0.5 0.0 1.0"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 ${pi}"/>
+        <geometry>
+          <mesh filename="${rudder_mesh}" scale="1 1 1"/>
+        </geometry>
+      </collision>
+
+      <inertial>
+        <mass value="${rudder_mass}"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+      </inertial>
+    </link>
+
+    <joint name="${namespace}/rudder_joint" type="revolute">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/rudder_link"/>
+      <origin xyz="-0.41735 0 0.0905" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>  <!-- 绕Z轴旋转 -->
+      <limit lower="${-rudder_max_angle}" upper="${rudder_max_angle}" effort="50" velocity="1.0"/>
+      <dynamics damping="0.5" friction="0.1"/>
+    </joint>
+
+    <!-- 固定翼 (滑翔升力)-->
+    <!-- 翼是固定的，但为在压力中心给hull传力，单独创建 link -->
+    <link name="${namespace}/wing_link">
+      <inertial>
+        <mass value="${wing_mass}"/>
+        <origin xyz="-0.0 0 0.0" rpy="0 0 0"/>
+        <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.1"/>
+      </inertial>
+      <!-- 无可视化 - 翼包含在船体网格中 -->
+      <!-- 后续如果翼有单独的网格文件，在此添加 visual -->
+    </link>
+
+    <joint name="${namespace}/wing_joint" type="fixed">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/wing_link"/>
+      <origin xyz="${wing_x} 0 ${wing_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!--油馕浮力受力点，后续实现浮力插件-->
+    <link name="${namespace}/bladder_link">
+      <inertial>
+        <mass value="0.001"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+      </inertial>
+      <visual>
+        <geometry><sphere radius="0.03"/></geometry>
+        <material name="Green"><color rgba="0 1 0 1"/></material>
+      </visual>
+    </link>
+
+    <joint name="${namespace}/bladder_joint" type="fixed">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/bladder_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>
