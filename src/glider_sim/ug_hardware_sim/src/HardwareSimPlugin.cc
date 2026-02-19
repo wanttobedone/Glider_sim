@@ -9,7 +9,7 @@
  *
  * 关节用 SetPosition(0, pos, true) 运动学设定，
  * 第三参数 true = preserveWorldVelocity，避免重置子 link 世界速度。
- * 参考 UUV FinPlugin 的做法（SetPosition 运动学 + AddRelativeForce 力学）。
+ * 参考 UUV FinPlugin 的做法（SetPosition 运动学和AddRelativeForce 力学）。
  */
 
 #include <ug_hardware_sim/HardwareSimPlugin.hh>
@@ -97,7 +97,7 @@ void HardwareSimPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   }
   this->nh_.reset(new ros::NodeHandle(this->namespace_));
 
-  // 从参数服务器读取参数（可由 launch/yaml 覆盖）
+  // 从参数服务器读取参数，默认值，由 launch/yaml 覆盖
   this->nh_->param("hardware_sim/battery/max_speed", this->batteryMaxSpeed_, 0.01);
   this->nh_->param("hardware_sim/battery/min_position", this->batteryMinPos_, -0.03385);
   this->nh_->param("hardware_sim/battery/max_position", this->batteryMaxPos_, 0.03385);
@@ -181,7 +181,7 @@ void HardwareSimPlugin::OnUpdate(const common::UpdateInfo &_info)
   if (dt <= 0.0)
     return;
 
-  // === 看门狗检查 (timeout <= 0 时禁用) ===
+  // 看门狗检查 (timeout <= 0 时禁用)
   if (this->watchdogTimeout_ > 0.0)
   {
     double timeSinceCmd = (ros::Time::now() - this->lastCmdTime_).toSec();
@@ -200,39 +200,39 @@ void HardwareSimPlugin::OnUpdate(const common::UpdateInfo &_info)
     }
   }
 
-  // === 执行机构动力学 ===
+  // 执行机构动力学
 
-  // 电池：速率限制
+  // 电池，速率限制
   this->currentBatteryPos_ = ApplyRateLimiter(
       this->currentBatteryPos_, this->targetBatteryPos_,
       this->batteryMaxSpeed_, dt);
   this->currentBatteryPos_ = std::max(this->batteryMinPos_,
                                        std::min(this->batteryMaxPos_, this->currentBatteryPos_));
 
-  // 油囊：速率限制
+  // 油囊，速率限制
   this->currentBallastVol_ = ApplyRateLimiter(
       this->currentBallastVol_, this->targetBallastVol_,
       this->ballastPumpRate_, dt);
   this->currentBallastVol_ = std::max(this->ballastMinVol_,
                                        std::min(this->ballastMaxVol_, this->currentBallastVol_));
 
-  // 尾舵：一阶滞后
+  // 尾舵，一阶滞后
   this->currentRudderAngle_ = ApplyFirstOrderLag(
       this->currentRudderAngle_, this->targetRudderAngle_,
       this->rudderAlpha_);
   this->currentRudderAngle_ = std::max(this->rudderMinAngle_,
                                         std::min(this->rudderMaxAngle_, this->currentRudderAngle_));
 
-  // === 驱动 Gazebo 关节 (preserveWorldVelocity = true) ===
+  // 驱动Gazebo 关节 (preserveWorldVelocity = true)
   this->batteryJoint_->SetPosition(0, this->currentBatteryPos_, true);
   this->rudderJoint_->SetPosition(0, this->currentRudderAngle_, true);
 
-  // === 发布实际体积给浮力引擎插件 ===
+  // 发布实际体积给浮力引擎插件
   std_msgs::Float64 volMsg;
   volMsg.data = this->currentBallastVol_;
   this->volumePub_.publish(volMsg);
 
-  // === 发布 joint_states（维护 TF 树）===
+  // 发布joint_states（维护 TF 树）
   sensor_msgs::JointState jsMsg;
   jsMsg.header.stamp = ros::Time::now();
   jsMsg.name.push_back(this->batteryJoint_->GetName());
@@ -245,7 +245,7 @@ void HardwareSimPlugin::OnUpdate(const common::UpdateInfo &_info)
   jsMsg.effort.push_back(0.0);
   this->jointStatePub_.publish(jsMsg);
 
-  // === 发布 ActuatorState 反馈 ===
+  // 发布ActuatorState 反馈
   ug_msgs::ActuatorState stateMsg;
   stateMsg.header.stamp = ros::Time::now();
   stateMsg.battery_position = this->currentBatteryPos_;
@@ -276,7 +276,7 @@ double HardwareSimPlugin::ApplyRateLimiter(
     return target;
 }
 
-/////////////////////////////////////////////////
+/////////////////////////////////////////////////一阶滞后
 double HardwareSimPlugin::ApplyFirstOrderLag(
     double current, double target, double alpha)
 {

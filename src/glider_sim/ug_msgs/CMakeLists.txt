@@ -10,6 +10,7 @@ add_message_files(FILES
   ActuatorCmd.msg
   ActuatorState.msg
   GliderState.msg
+  MissionState.msg
 )
 
 generate_messages(DEPENDENCIES

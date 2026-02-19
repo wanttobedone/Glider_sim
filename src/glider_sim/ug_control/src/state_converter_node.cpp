@@ -20,6 +20,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <ug_msgs/GliderState.h>
+#include <clocale>
 
 class StateConverterNode
 {
@@ -87,6 +88,7 @@ private:
 
 int main(int argc, char **argv)
 {
+  setlocale(LC_ALL, "");
   ros::init(argc, argv, "state_converter_node");
   StateConverterNode node;
   ros::spin();

@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   visualization_msgs
+  interactive_markers
   tf2_ros
   ug_msgs
 )
@@ -14,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_python_setup()
 
 catkin_package(
-  CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs visualization_msgs tf2_ros ug_msgs
+  CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs visualization_msgs interactive_markers tf2_ros ug_msgs
 )
 
 include_directories(${catkin_INCLUDE_DIRS})
@@ -24,8 +25,13 @@ add_executable(glider_viz_node src/glider_viz_node.cpp)
 target_link_libraries(glider_viz_node ${catkin_LIBRARIES})
 add_dependencies(glider_viz_node ${catkin_EXPORTED_TARGETS})
 
+# 目标点交互标记节点
+add_executable(target_marker_node src/target_marker_node.cpp)
+target_link_libraries(target_marker_node ${catkin_LIBRARIES})
+add_dependencies(target_marker_node ${catkin_EXPORTED_TARGETS})
+
 # 安装
-install(TARGETS glider_viz_node
+install(TARGETS glider_viz_node target_marker_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

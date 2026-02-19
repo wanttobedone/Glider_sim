@@ -147,10 +147,10 @@ void BuoyancyEnginePlugin::OnUpdate(const common::UpdateInfo &_info)
   // 发布状态
   this->PublishStatus();
 
-  // 发布力（调试用）
+  // 发布力（调试用, 力在世界系下，始终竖直向上/下）
   geometry_msgs::WrenchStamped forceMsg;
   forceMsg.header.stamp = ros::Time::now();
-  forceMsg.header.frame_id = this->link_->GetName();
+  forceMsg.header.frame_id = "world";
   forceMsg.wrench.force.z = buoyancyForce;
   this->forcePub_.publish(forceMsg);
 }

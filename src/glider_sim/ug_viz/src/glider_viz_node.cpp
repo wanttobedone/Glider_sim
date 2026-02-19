@@ -33,8 +33,10 @@
 
 #include <ug_msgs/GliderState.h>
 #include <ug_msgs/ActuatorState.h>
+#include <ug_msgs/MissionState.h>
 
 #include <cmath>
+#include <clocale>
 #include <sstream>
 #include <iomanip>
 
@@ -60,6 +62,8 @@ public:
                               &GliderVizNode::onCmdDepth, this);
     headingSub_ = nh_.subscribe("/" + ns_ + "/cmd/heading", 1,
                                 &GliderVizNode::onCmdHeading, this);
+    missionSub_ = nh_.subscribe("/" + ns_ + "/mission/state", 1,
+                                 &GliderVizNode::onMissionState, this);
 
     // 发布者
     markerPub_ = nh_.advertise<visualization_msgs::MarkerArray>(
@@ -141,6 +145,12 @@ private:
   void onCmdHeading(const std_msgs::Float64::ConstPtr &msg)
   {
     targetHeading_ = msg->data;
+  }
+
+  void onMissionState(const ug_msgs::MissionState::ConstPtr &msg)
+  {
+    missionState_ = *msg;
+    hasMissionState_ = true;
   }
 
   // 四元数旋转向量辅助函数
@@ -333,6 +343,16 @@ private:
             << "cc  Rud: " << std::setprecision(1) << (a.rudder_angle * 180.0 / M_PI) << "deg";
       }
 
+      if (hasMissionState_)
+      {
+        const char* stateNames[] = {"IDLE", "DIVING", "CLIMBING", "ARRIVED"};
+        uint8_t si = missionState_.state;
+        const char* sn = (si <= 3) ? stateNames[si] : "UNKNOWN";
+        oss << "\nMission: " << sn;
+        if (si > 0)
+          oss << "  dist: " << std::setprecision(1) << missionState_.distance << "m";
+      }
+
       visualization_msgs::Marker tm;
       tm.header.frame_id = baseFrame;
       tm.header.stamp = now;
@@ -373,6 +393,8 @@ private:
   bool hasPose_ = false;
   bool hasGliderState_ = false;
   bool hasActuatorState_ = false;
+  bool hasMissionState_ = false;
+  ug_msgs::MissionState missionState_;
   int pathCounter_ = 0;
 
   // 轨迹累积
@@ -380,7 +402,7 @@ private:
   nav_msgs::Path targetPath_;
 
   // ROS 通信
-  ros::Subscriber poseSub_, stateSub_, actuatorSub_, depthSub_, headingSub_;
+  ros::Subscriber poseSub_, stateSub_, actuatorSub_, depthSub_, headingSub_, missionSub_;
   ros::Publisher markerPub_, textPub_, actualPathPub_, targetPathPub_;
   ros::Timer timer_;
   tf2_ros::TransformBroadcaster tfBroadcaster_;
@@ -388,6 +410,7 @@ private:
 
 int main(int argc, char **argv)
 {
+  setlocale(LC_ALL, "");
   ros::init(argc, argv, "glider_viz_node");
   GliderVizNode node;
   ros::spin();

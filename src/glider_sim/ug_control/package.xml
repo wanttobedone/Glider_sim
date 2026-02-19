@@ -15,4 +15,5 @@
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>ug_msgs</depend>
+  <depend>dynamic_reconfigure</depend>
 </package>

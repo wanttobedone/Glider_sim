@@ -27,6 +27,7 @@
 #include <ug_msgs/ActuatorState.h>
 #include <ug_control/pid_controller.h>
 #include <cmath>
+#include <clocale>
 
 class ControlNode
 {
@@ -260,6 +261,7 @@ private:
 
 int main(int argc, char **argv)
 {
+  setlocale(LC_ALL, "");
   ros::init(argc, argv, "control_node");
   ControlNode node;
   ros::spin();

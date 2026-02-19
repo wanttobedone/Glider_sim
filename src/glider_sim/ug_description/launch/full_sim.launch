@@ -14,8 +14,8 @@
   <arg name="debug" default="0"/>
   <arg name="gui" default="true"/>
   <arg name="paused" default="false"/>
-  <arg name="dashboard" default="false"/>
-  <arg name="control" default="true"/>  <!-- 手动调试时默认关闭，用 control:=true 启用 -->
+  <arg name="dashboard" default="true"/>
+  <arg name="control" default="false"/>  <!-- 手动调试时默认关闭，用 control:=true 启用 -->
   <arg name="rviz" default="true"/>    <!-- RViz 可视化 -->
   <!--RQT控制和节点控制冲突，还没改，不要同时启动-->
 

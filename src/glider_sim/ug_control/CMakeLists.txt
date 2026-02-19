@@ -11,11 +11,16 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_ros
   ug_msgs
+  dynamic_reconfigure
+)
+
+generate_dynamic_reconfigure_options(
+  cfg/Mission.cfg
 )
 
 catkin_package(
   INCLUDE_DIRS include
-  CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs tf2 tf2_ros ug_msgs
+  CATKIN_DEPENDS roscpp std_msgs geometry_msgs nav_msgs tf2 tf2_ros ug_msgs dynamic_reconfigure
 )
 
 include_directories(
@@ -33,7 +38,12 @@ add_executable(control_node src/pid_controller.cpp src/control_node.cpp)
 target_link_libraries(control_node ${catkin_LIBRARIES})
 add_dependencies(control_node ${catkin_EXPORTED_TARGETS})
 
-install(TARGETS state_converter_node control_node
+# 任务节点
+add_executable(mission_node src/mission_node.cpp)
+target_link_libraries(mission_node ${catkin_LIBRARIES})
+add_dependencies(mission_node ${${PROJECT_NAME}_gencfg} ${catkin_EXPORTED_TARGETS})
+
+install(TARGETS state_converter_node control_node mission_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

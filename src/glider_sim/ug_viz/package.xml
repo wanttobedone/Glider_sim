@@ -16,12 +16,14 @@
   <build_depend>visualization_msgs</build_depend>
   <build_depend>tf2_ros</build_depend>
   <build_depend>ug_msgs</build_depend>
+  <build_depend>interactive_markers</build_depend>
 
   <exec_depend>roscpp</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>interactive_markers</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>ug_msgs</exec_depend>
 

@@ -1,0 +1,6 @@
+# 任务参数:，zigzag导航
+dive_depth: 30.0            # 最大下潜深度 [m]
+climb_depth: 2.0            # 最小上浮深度 [m]
+acceptance_radius: 20.0     # 航点到达判定半径 [m]
+depth_threshold: 1.0        # 深度切换阈值 [m]
+mission_rate: 1.0           # 任务决策频率 [Hz]

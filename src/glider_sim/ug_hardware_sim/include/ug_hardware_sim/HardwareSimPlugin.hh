@@ -9,7 +9,7 @@
  *   发布实际体积给浮力引擎插件
  *   发布 /joint_states（维护TF树）
  *   发布 ActuatorState（反馈给控制层）
- *   看门狗安全保护（timeout <= 0 时禁用）
+ *   failsafe安全保护（timeout <= 0 时禁用）
  */
 
 #ifndef UG_HARDWARE_SIM_HARDWARE_SIM_PLUGIN_HH_
@@ -78,7 +78,7 @@ private:
   double rudderMinAngle_;
   double rudderMaxAngle_;
 
-  // 看门狗 (timeout <= 0 时禁用)
+  // failsafe (timeout <= 0 时禁用)
   double watchdogTimeout_;
 
   // 安全状态

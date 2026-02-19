@@ -22,7 +22,7 @@ rudder:
   max_angle: 0.52          # 最大舵角 [rad]
   initial_angle: 0.0       # 初始舵角 [rad]
 
-# 看门狗，timeout <= 0 时禁用，方便 rostopic pub 调试
+# failsafe，timeout <= 0 时禁用，方便 rostopic pub 调试
 watchdog:
   timeout: -1.0            # 指令超时时间 [s]，<= 0 禁用看门狗
 

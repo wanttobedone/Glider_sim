@@ -1,5 +1,6 @@
 Panels:
   - Class: rviz/Displays
+    Help Height: 85
     Name: Displays
     Property Tree Widget:
       Expanded:
@@ -8,68 +9,124 @@ Panels:
         - /Markers1
         - /Actual Path1
       Splitter Ratio: 0.5
+    Tree Height: 1109
   - Class: rviz/Views
+    Expanded:
+      - /Current View1
     Name: Views
-
+    Splitter Ratio: 0.5
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
 Visualization Manager:
   Class: ""
   Displays:
-    # ── Grid ──
-    - Class: rviz/Grid
-      Name: Grid
-      Plane Cell Count: 20
+    - Alpha: 0.5
       Cell Size: 1
+      Class: rviz/Grid
       Color: 100; 100; 100
+      Enabled: true
       Line Style:
-        Line Width: 0.02
+        Line Width: 0.019999999552965164
         Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 20
       Reference Frame: <Fixed Frame>
       Value: true
-
-    # ── Robot Model ──
     - Alpha: 1
       Class: rviz/RobotModel
-      Description Topic: ""
+      Collision Enabled: false
       Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        ug_glider/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider/battery_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider/bladder_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider/rudder_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider/wing_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Name: RobotModel
       Robot Description: /ug_glider/robot_description
       TF Prefix: ""
+      Update Interval: 0
       Value: true
-
-    # ── TF (disabled by default, enable for debugging) ──
+      Visual Enabled: true
     - Class: rviz/TF
       Enabled: false
+      Filter (blacklist): ""
+      Filter (whitelist): ""
       Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Alpha: 1
+      Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
+      Tree:
+        {}
+      Update Interval: 0
       Value: false
-
-    # ── Viz Markers (attitude arrow, velocity arrow, target depth, water surface, target heading) ──
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /ug_glider/viz/markers
       Name: Markers
+      Namespaces:
+        attitude: true
+        target_depth: true
+        target_heading: true
+        velocity: true
+        water_surface: true
       Queue Size: 1
       Value: true
-
-    # ── Status Text Overlay ──
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /ug_glider/viz/status_text
       Name: Status Text
+      Namespaces:
+        status_text: true
       Queue Size: 1
       Value: true
-
-    # ── Actual Trajectory (green) ──
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
       Color: 50; 255; 50
       Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.03
+      Line Width: 0.029999999329447746
       Name: Actual Path
       Offset:
         X: 0
@@ -78,17 +135,22 @@ Visualization Manager:
       Pose Color: 255; 85; 255
       Pose Style: None
       Queue Size: 1
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /ug_glider/viz/actual_path
+      Unreliable: false
       Value: true
-
-    # ── Target Trajectory (red dashed - shown as thinner red line) ──
-    - Alpha: 0.8
+    - Alpha: 0.800000011920929
       Buffer Length: 1
       Class: rviz/Path
       Color: 255; 50; 50
       Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
-      Line Width: 0.02
+      Line Width: 0.019999999552965164
       Name: Target Path
       Offset:
         X: 0
@@ -97,23 +159,45 @@ Visualization Manager:
       Pose Color: 255; 85; 255
       Pose Style: None
       Queue Size: 1
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic: /ug_glider/viz/target_path
+      Unreliable: false
       Value: true
-
-    # ── Buoyancy Force (debug, from buoyancy engine plugin) ──
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /ug_glider/viz/target_markers
+      Name: Target Markers
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: true
+    - Class: rviz/InteractiveMarkers
+      Enable Transparency: true
+      Enabled: false
+      Name: Interactive Markers
+      Show Axes: false
+      Show Descriptions: true
+      Show Visual Aids: false
+      Update Topic: /ug_glider/target_marker/update
+      Value: false
     - Alpha: 1
+      Arrow Width: 0.5
       Class: rviz/WrenchStamped
       Enabled: false
-      Force Arrow Scale: 0.1
+      Force Arrow Scale: 0.10000000149011612
       Force Color: 204; 51; 51
+      Hide Small Values: true
+      History Length: 1
       Name: Buoyancy Force
+      Queue Size: 10
       Topic: /ug_glider/buoyancy_engine/applied_force
-      Torque Arrow Scale: 0.1
+      Torque Arrow Scale: 0.10000000149011612
       Torque Color: 204; 204; 51
+      Unreliable: false
       Value: false
-
   Enabled: true
-  Fixed Frame: world
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
@@ -126,33 +210,41 @@ Visualization Manager:
     - Class: rviz/MoveCamera
     - Class: rviz/FocusCamera
     - Class: rviz/Measure
+    - Class: rviz/SetGoal
+      Topic: /move_base_simple/goal
   Value: true
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 8
+      Distance: 8.022035598754883
       Enable Stereo Rendering:
-        Stereo Eye Separation: 0.06
+        Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Field of View: 0.7853981852531433
       Focal Point:
-        X: 0
-        Y: 0
-        Z: -1
+        X: 0.3789181113243103
+        Y: -0.8264093399047852
+        Z: -0.17548827826976776
       Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
-      Near Clip Distance: 0.01
-      Pitch: 0.5
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 7.720664143562317e-07
       Target Frame: ug_glider/base_link
-      Yaw: 0.8
+      Yaw: 2.5931618213653564
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 800
-  Width: 1200
+  Height: 1369
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd000000010000000000000161000004f1fc0200000002fb000000100044006900730070006c0061007900730100000047000004f1000000f100fffffffb0000000a0056006900650077007300000001eb00000114000000c200ffffff00000374000004f100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
-    collapsed: true
+    collapsed: false
+  Width: 1244
+  X: 72
+  Y: 34
