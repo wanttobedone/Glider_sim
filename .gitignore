@@ -35,6 +35,13 @@ src/my_glider_sim/
 .DS_Store
 Thumbs.db
 
-src/ug_description/scripts/calculate_hull_cog.py
-
+# 临时验证用的脚本
 src/glider_sim/ug_viz/scripts/glider_viz_node
+
+src/glider_sim/ug_description/scripts
+
+src/glider_sim/ug_gazebo_plugins/scripts
+
+src/glider_sim/ug_description/launch/test_liftdrag.launch
+src/glider_sim/ug_description/urdf/ug_glider_gazebo_test.xacro
+src/glider_sim/ug_description/urdf/ug_glider_test_fixed.xacro

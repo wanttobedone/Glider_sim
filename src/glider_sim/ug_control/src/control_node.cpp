@@ -3,7 +3,7 @@
  *   两种模式，模式0，MANUAL手动调试，并联独立 PID（原始逻辑）
  *     Pitch PID, cmd/pitch改变电池位置
  *     Depth PID,cmd/depth改油囊体积
- *   模式1级联控制，俯仰与深度解耦
+ *   模式1，级联控制，俯仰与深度解耦
  *     外环depth PID, cmd/depth 深度驱动调节目标俯仰角
  *     内环pitch PID, 目标俯仰角驱动调节电池位置
  *     油囊前馈(带死区), depth误差，调整油囊体积
@@ -16,6 +16,9 @@
  *   /{ns}/cmd/heading        (Float64, 目标航向 [rad])
  *   /{ns}/cmd/depth          (Float64, 目标深度 [m])
  *   /{ns}/cmd/mode           (Int32, 0=MANUAL, 1=CASCADE)
+ *   /{ns}/cmd/battery_direct (Float64, 直接设定电池位置 [m], 仅手动模式, 覆盖pitch PID)
+ *   /{ns}/cmd/ballast_direct (Float64, 直接设定油囊体积 [m³], 仅手动模式, 覆盖depth PID)
+ *   /{ns}/cmd/rudder_direct  (Float64, 直接设定舵角 [rad], 仅手动模式, 覆盖heading PID)
  * 发布话题:  /{ns}/actuator_cmd       (ActuatorCmd, 发给硬件层)
  */
 
@@ -97,6 +100,11 @@ public:
     cmdDepthSub_ = nhNs.subscribe("cmd/depth", 1, &ControlNode::onCmdDepth, this);
     cmdModeSub_ = nhNs.subscribe("cmd/mode", 1, &ControlNode::onCmdMode, this);
 
+    // 手动模式下的直接执行器控制话题，现在会覆盖对应 PID 输出
+    batteryDirectSub_ = nhNs.subscribe("cmd/battery_direct", 1, &ControlNode::onBatteryDirect, this);
+    ballastDirectSub_ = nhNs.subscribe("cmd/ballast_direct", 1, &ControlNode::onBallastDirect, this);
+    rudderDirectSub_ = nhNs.subscribe("cmd/rudder_direct", 1, &ControlNode::onRudderDirect, this);
+
     // 发布
     cmdPub_ = nhNs.advertise<ug_msgs::ActuatorCmd>("actuator_cmd", 1);
 
@@ -149,9 +157,31 @@ private:
       pitchPID_.reset();
       depthOuterPID_.reset();
       depthPID_.reset();
+      // 清除直接控制标志
+      batteryDirectActive_ = false;
+      ballastDirectActive_ = false;
+      rudderDirectActive_ = false;
       controlMode_ = newMode;
       ROS_INFO("[Control] 模式切换: %s", newMode == 1 ? "CASCADE" : "MANUAL");
     }
+  }
+
+  void onBatteryDirect(const std_msgs::Float64::ConstPtr &msg)
+  {
+    batteryDirectValue_ = msg->data;
+    batteryDirectActive_ = true;
+  }
+
+  void onBallastDirect(const std_msgs::Float64::ConstPtr &msg)
+  {
+    ballastDirectValue_ = msg->data;
+    ballastDirectActive_ = true;
+  }
+
+  void onRudderDirect(const std_msgs::Float64::ConstPtr &msg)
+  {
+    rudderDirectValue_ = msg->data;
+    rudderDirectActive_ = true;
   }
 
   void controlLoop(const ros::TimerEvent &event)
@@ -195,15 +225,35 @@ private:
     else
     {
       // 手动调试模式
-      // Pitch由电池位置控制
-      double pitchError = targetPitch_ - currentState_.pitch;
-      cmd.battery_position = pitchPID_.compute(pitchError, dt);
+      // Pitch由电池位置控制，可被 cmd/battery_direct 覆盖
+      if (batteryDirectActive_)
+      {
+        cmd.battery_position = std::max(-0.03385, std::min(0.03385, batteryDirectValue_));
+      }
+      else
+      {
+        double pitchError = targetPitch_ - currentState_.pitch;
+        cmd.battery_position = pitchPID_.compute(pitchError, dt);
+      }
 
-      // Depth改油囊体积
-      double depthError = targetDepth_ - currentState_.depth;
-      double volumeOffset = -depthPID_.compute(depthError, dt);
-      cmd.ballast_volume = neutralVolume_ + volumeOffset;
-      cmd.ballast_volume = std::max(0.0, std::min(0.001, cmd.ballast_volume));
+      // Depth改油囊体积，可被 cmd/ballast_direct 覆盖
+      if (ballastDirectActive_)
+      {
+        cmd.ballast_volume = std::max(0.0, std::min(0.001, ballastDirectValue_));
+      }
+      else
+      {
+        double depthError = targetDepth_ - currentState_.depth;
+        double volumeOffset = -depthPID_.compute(depthError, dt);
+        cmd.ballast_volume = neutralVolume_ + volumeOffset;
+        cmd.ballast_volume = std::max(0.0, std::min(0.001, cmd.ballast_volume));
+      }
+    }
+
+    // Heading舵角，可被 cmd/rudder_direct 覆盖，仅手动模式
+    if (controlMode_ == 0 && rudderDirectActive_)
+    {
+      cmd.rudder_angle = std::max(-0.52, std::min(0.52, rudderDirectValue_));
     }
 
     cmdPub_.publish(cmd);
@@ -236,6 +286,7 @@ private:
   ros::NodeHandle nh_;
   ros::Subscriber stateSub_, actuatorStateSub_;
   ros::Subscriber cmdPitchSub_, cmdHeadingSub_, cmdDepthSub_, cmdModeSub_;
+  ros::Subscriber batteryDirectSub_, ballastDirectSub_, rudderDirectSub_;
   ros::Publisher cmdPub_;
   ros::Timer controlTimer_;
 
@@ -251,6 +302,14 @@ private:
   double neutralVolume_;
   double controlRate_;
   bool stateReceived_;
+
+  // 手动模式直接控制
+  double batteryDirectValue_ = 0.0;
+  double ballastDirectValue_ = 0.0005;
+  double rudderDirectValue_ = 0.0;
+  bool batteryDirectActive_ = false;
+  bool ballastDirectActive_ = false;
+  bool rudderDirectActive_ = false;
 
   // 级联模式参数
   int controlMode_;       // 0=MANUAL, 1=CASCADE

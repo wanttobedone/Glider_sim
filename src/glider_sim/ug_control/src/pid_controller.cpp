@@ -1,5 +1,5 @@
 /**
- * 通用 PID 控制器实现
+ * 通用 PID 控制器实现，纯数学计算节点
  */
 
 #include <ug_control/pid_controller.h>

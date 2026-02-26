@@ -2,7 +2,7 @@
 <!--
   必须的Gazebo仿真插件
   包含Fossen水动力模型、浮力、翼面升力/阻力、方向舵升力/阻力
-  uuv_sim的fin插件不适配Gazebo 11，目前使用Gazebo自带插件，后续自己开发
+  uuv_sim的fin插件不适配Gazebo 11，目前使用Gazebo自带插件，后续自己开发，这个已经实现，固定翼和转向舵都挂载升阻力插件
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
@@ -137,38 +137,56 @@
       </plugin>
     </gazebo>
 
-    <!-- 固定翼升力/阻力 - 使用 Gazebo 内置 LiftDrag 插件 -->
-    <!-- libuuv_fin_ros_plugin.so 在 Gazebo 11 + Intel NUC环境下会崩溃 -->
-    <!-- 挂在 base_link，cp 相对于船体中心 -->
+    <!-- 固定翼升力/阻力，与流场耦合升阻力插件，替代 Gazebo 内置 LiftDragPlugin，能够支持洋流耦合和失速混合 -->
     <xacro:if value="true">  <!--调试用，是否禁用wings-->
       <gazebo>
-        <plugin name="${namespace}_wing_lift" filename="libLiftDragPlugin.so">
-          <air_density>${fluid_density}</air_density>
-          <cla>${wing_lift_coef}</cla>
-          <cda>${wing_drag_coef}</cda>
+        <plugin name="${namespace}_wing_lift" filename="libug_liftdrag_hydro_plugin.so">
+          <namespace>${namespace}</namespace>
+          <link_name>base_link</link_name>
+          <plugin_name>wing_hydro</plugin_name>
+
+          <fluid_density>${fluid_density}</fluid_density>
+          <area>${wing_area}</area>
           <cp>-0.325 0 0.15</cp>
           <forward>1 0 0</forward>
           <upward>0 0 1</upward>
-          <area>${wing_area}</area>
-          <link_name>${namespace}/base_link</link_name>
+
+          <cla>${wing_lift_coef}</cla>
+          <cda>${wing_drag_coef}</cda>
+          <alpha_stall>0.3</alpha_stall>
+          <cla_stall>1.2</cla_stall>
+          <cda_stall>1.0</cda_stall>
+          <stall_k>15.0</stall_k>
+
+          <current_velocity_topic>hydrodynamics/current_velocity</current_velocity_topic>
         </plugin>
       </gazebo>
     </xacro:if>
 
-    <!-- 方向舵升力/阻力 - 挂在 base_link，通过 control_joint 读取舵角 -->
+    <!-- 方向舵升力/阻力，舵面控制 -->
     <gazebo>
-      <plugin name="${namespace}_rudder_lift" filename="libLiftDragPlugin.so">
-        <air_density>${fluid_density}</air_density>
-        <cla>${rudder_lift_coef}</cla>
-        <cda>${rudder_drag_coef}</cda>
-        <alpha_stall>0.6</alpha_stall>
-        <link_name>${namespace}/base_link</link_name>
+      <plugin name="${namespace}_rudder_lift" filename="libug_liftdrag_hydro_plugin.so">
+        <namespace>${namespace}</namespace>
+        <link_name>base_link</link_name>
+        <plugin_name>rudder_hydro</plugin_name>
+
+        <fluid_density>${fluid_density}</fluid_density>
+        <area>${rudder_area}</area>
         <cp>-0.417 0 0.09</cp>
         <forward>1 0 0</forward>
         <upward>0 1 0</upward>
-        <area>${rudder_area}</area>
-        <control_joint_name>${namespace}/rudder_joint</control_joint_name>
+
+        <cla>${rudder_lift_coef}</cla>
+        <cda>${rudder_drag_coef}</cda>
+        <alpha_stall>0.6</alpha_stall>
+        <cla_stall>1.2</cla_stall>
+        <cda_stall>1.0</cda_stall>
+        <stall_k>15.0</stall_k>
+
+        <control_joint_name>rudder_joint</control_joint_name>
         <control_joint_rad_to_cl>2.0</control_joint_rad_to_cl>
+
+        <current_velocity_topic>hydrodynamics/current_velocity</current_velocity_topic>
       </plugin>
     </gazebo>
 

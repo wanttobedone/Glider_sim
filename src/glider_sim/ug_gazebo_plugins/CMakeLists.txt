@@ -31,7 +31,7 @@ generate_messages(
 ## Catkin package
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES buoyancy_engine_plugin
+  LIBRARIES buoyancy_engine_plugin ug_liftdrag_hydro_plugin
   CATKIN_DEPENDS roscpp std_msgs geometry_msgs message_runtime gazebo_ros
   DEPENDS GAZEBO
 )
@@ -60,8 +60,23 @@ add_dependencies(buoyancy_engine_plugin
   ${catkin_EXPORTED_TARGETS}
 )
 
+## Build the lift-drag hydro plugin
+add_library(ug_liftdrag_hydro_plugin
+  src/UGLiftDragHydroPlugin.cc
+)
+
+target_link_libraries(ug_liftdrag_hydro_plugin
+  ${catkin_LIBRARIES}
+  ${GAZEBO_LIBRARIES}
+)
+
+add_dependencies(ug_liftdrag_hydro_plugin
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
 ## Install
-install(TARGETS buoyancy_engine_plugin
+install(TARGETS buoyancy_engine_plugin ug_liftdrag_hydro_plugin
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
