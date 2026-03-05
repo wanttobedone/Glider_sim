@@ -10,6 +10,7 @@
  */
 
 #include <ug_gazebo_plugins/UGLiftDragHydroPlugin.hh>
+#include <ug_gazebo_plugins/LiftDragDebug.h>
 #include <cmath>
 
 namespace gazebo
@@ -137,7 +138,17 @@ void UGLiftDragHydroPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   if (_sdf->HasElement("vel_deadband"))
     velDeadband_ = _sdf->Get<double>("vel_deadband");
 
-  //   初始化 ROS  
+  //   初始化 Gazebo transport（订阅洋流，与 UUV Fossen 走同一通道）
+  gazeboNode_ = transport::NodePtr(new transport::Node());
+#if GAZEBO_MAJOR_VERSION >= 8
+  gazeboNode_->Init(model_->GetWorld()->Name());
+#else
+  gazeboNode_->Init(model_->GetWorld()->GetName());
+#endif
+  currentSub_ = gazeboNode_->Subscribe(
+      currentTopic_, &UGLiftDragHydroPlugin::OnCurrentReceived, this);
+
+  //   初始化 ROS（仅用于 debug_force 发布）
   if (!ros::isInitialized())
   {
     gzerr << "[UGLiftDragHydro] ROS 未初始化\n";
@@ -146,16 +157,12 @@ void UGLiftDragHydroPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   rosNode_.reset(new ros::NodeHandle(namespace_));
 
-  // 订阅洋流 (使用 Twist，与 UUV 插件一致)
-  currentSub_ = rosNode_->subscribe(
-      currentTopic_, 1, &UGLiftDragHydroPlugin::OnCurrentReceived, this);
-
   // 调试话题：发布升阻力
   std::string pluginName = "liftdrag_hydro";
   if (_sdf->HasElement("plugin_name"))
     pluginName = _sdf->Get<std::string>("plugin_name");
 
-  debugForcePub_ = rosNode_->advertise<geometry_msgs::WrenchStamped>(
+  debugForcePub_ = rosNode_->advertise<ug_gazebo_plugins::LiftDragDebug>(
       pluginName + "/debug_force", 1);
 
   //   绑定物理更新回调  
@@ -172,12 +179,10 @@ void UGLiftDragHydroPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
         << "\n";
 }
 
-void UGLiftDragHydroPlugin::OnCurrentReceived(
-    const geometry_msgs::Twist::ConstPtr &_msg)
+void UGLiftDragHydroPlugin::OnCurrentReceived(ConstVector3dPtr &_msg)
 {
   std::lock_guard<std::mutex> lock(currentMutex_);
-  currentVelocityBuffer_.Set(
-      _msg->linear.x, _msg->linear.y, _msg->linear.z);
+  currentVelocityBuffer_.Set(_msg->x(), _msg->y(), _msg->z());
 }
 
 void UGLiftDragHydroPlugin::OnUpdate(const common::UpdateInfo & /*_info*/)
@@ -278,20 +283,22 @@ void UGLiftDragHydroPlugin::OnUpdate(const common::UpdateInfo & /*_info*/)
   // 调试，发布力信息，按需发布
   if (debugForcePub_.getNumSubscribers() > 0)
   {
-    geometry_msgs::WrenchStamped msg;
+    ug_gazebo_plugins::LiftDragDebug msg;
     msg.header.stamp = ros::Time::now();
     msg.header.frame_id = link_->GetName();
 
-    // force 分量：x = lift, y = drag, z = total
-    // 用 wrench.force 存局部坐标系下的力
-    msg.wrench.force.x = liftMag;       // 升力大小 [N]
-    msg.wrench.force.y = dragMag;       // 阻力大小 [N]
-    msg.wrench.force.z = speed;         // 相对流速 [m/s]
-
-    // torque 分量存攻角等调试信息
-    msg.wrench.torque.x = alpha;        // 攻角 [rad]
-    msg.wrench.torque.y = cl;           // 升力系数
-    msg.wrench.torque.z = cd;           // 阻力系数
+    msg.lift = liftMag;
+    msg.drag = dragMag;
+    msg.force_world.x = forceWorld.X();
+    msg.force_world.y = forceWorld.Y();
+    msg.force_world.z = forceWorld.Z();
+    msg.alpha = alpha;
+    msg.cl = cl;
+    msg.cd = cd;
+    msg.relative_speed = speed;
+    msg.current_velocity.x = currentVel.X();
+    msg.current_velocity.y = currentVel.Y();
+    msg.current_velocity.z = currentVel.Z();
 
     debugForcePub_.publish(msg);
   }

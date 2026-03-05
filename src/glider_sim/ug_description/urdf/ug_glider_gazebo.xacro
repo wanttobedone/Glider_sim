@@ -20,7 +20,8 @@
   <xacro:property name="oil_neutral_volume" value="0.0005"/>    <!-- 中性浮力时油囊体积 500cc [m^3] -->
   <xacro:property name="oil_min_volume" value="0.0"/>           <!-- 油囊最小体积 0cc [m^3] -->
   <xacro:property name="oil_max_volume" value="0.001"/>         <!-- 油囊最大体积 1000cc [m^3] -->
-  <!-- 油泵流速已移至 ug_hardware_sim 参数配置 -->  <!--为方便演示，暂且设置作用点为浮力中心-->
+  <!-- 油泵流速已移至 ug_hardware_sim 参数配置 --> 
+   <!--为方便演示，暂且设置作用点为浮力中心-->
   <xacro:property name="oil_bladder_x" value="0.0"/>         <!-- 油囊位置x（尾部）-0.361[m] -->
   <xacro:property name="oil_bladder_y" value="0.000"/>        <!-- 油囊位置y [m] -->
   <xacro:property name="oil_bladder_z" value="0.0"/>       <!-- 油囊位置z（浮心下方）-0.05221[m] -->
@@ -39,7 +40,7 @@
   <xacro:property name="Dl_11" value="-2.0"/>               <!-- 纵荡阻尼 [N*s/m] -->
   <xacro:property name="Dl_22" value="-25.0"/>              <!-- 横荡阻尼 [N*s/m] -->
   <xacro:property name="Dl_33" value="-25.0"/>              <!-- 垂荡阻尼 [N*s/m] -->
-  <xacro:property name="Dl_44" value="-0.5"/>               <!-- 横滚阻尼 [N*m*s/rad] -->
+  <xacro:property name="Dl_44" value="-4.5"/>               <!-- 横滚阻尼 [N*m*s/rad] -->
   <xacro:property name="Dl_55" value="-5.0"/>              <!-- 纵摇阻尼 [N*m*s/rad] -->
   <xacro:property name="Dl_66" value="-5.0"/>              <!-- 艏摇阻尼 [N*m*s/rad] -->
 
@@ -47,7 +48,7 @@
   <xacro:property name="Dq_11" value="-5.0"/>              <!-- 纵荡二次阻尼 [N*s^2/m^2] -->
   <xacro:property name="Dq_22" value="-160.0"/>             <!-- 横荡二次阻尼 [N*s^2/m^2] -->
   <xacro:property name="Dq_33" value="-160.0"/>             <!-- 垂荡二次阻尼 [N*s^2/m^2] -->
-  <xacro:property name="Dq_44" value="-5.0"/>               <!-- 横滚二次阻尼 -->
+  <xacro:property name="Dq_44" value="-40.0"/>              <!-- 横滚二次阻尼 -->
   <xacro:property name="Dq_55" value="-50.0"/>              <!-- 纵摇二次阻尼 -->
   <xacro:property name="Dq_66" value="-50.0"/>              <!-- 艏摇二次阻尼 -->
 
@@ -187,6 +188,30 @@
         <control_joint_rad_to_cl>2.0</control_joint_rad_to_cl>
 
         <current_velocity_topic>hydrodynamics/current_velocity</current_velocity_topic>
+      </plugin>
+    </gazebo>
+
+    <!-- 分层洋流插件 -->
+    <!-- 根据滑翔机深度实时插值洋流，同时发布到 Gazebo transport用于物理计算和 ROS用于调试 -->
+    <!-- 数据源：SDF <layer> 标签（简单模式）或 CS  <!-- 简单模式：ENU 分层表 (vx=东, vy=北, vz=上) -->
+        <layer depth="0"   vx="0.1"  vy="0.0" vz="0.0"/>
+        <layer depth="10"  vx="0.08" vy="0.0" vz="0.0"/>
+        <layer depth="20"  vx="0.03" vy="0.0" vz="0.0"/>
+        <layer depth="30"  vx="0.0"  vy="0.0" vz="0.0"/>
+V 文件（真实海洋数据模式），CSV是DAVE开发用到的格式，要有个脚本把CFD数据转成CSV -->
+    <gazebo>
+      <plugin name="${namespace}_ocean_current" filename="libug_ocean_current_plugin.so">
+        <namespace>${namespace}</namespace>
+        <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
+
+        <!-- 简单模式：ENU 分层表 (vx=东, vy=北, vz=上) -->
+        <layer depth="0"   vx="0.1"  vy="0.0" vz="0.0"/>
+        <layer depth="10"  vx="0.08" vy="0.0" vz="0.0"/>
+        <layer depth="20"  vx="0.03" vy="0.0" vz="0.0"/>
+        <layer depth="30"  vx="0.0"  vy="0.0" vz="0.0"/>
+
+        <!-- 真实模式，与上方二选一，前提是拿到网站原始CFD数据然后转了CSV，启用CSV，格式兼容DAVE-->
+        <!-- <database_csv>$(find ug_description)/config/ocean_current.csv</database_csv> -->
       </plugin>
     </gazebo>
 

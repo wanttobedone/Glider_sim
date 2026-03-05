@@ -13,13 +13,14 @@
 #include <memory>
 
 #include <ros/ros.h>
-#include <geometry_msgs/Twist.h>
-#include <geometry_msgs/WrenchStamped.h>
+#include <ug_gazebo_plugins/LiftDragDebug.h>
 
 #include <gazebo/gazebo.hh> //Gazebo 的核心物理引擎 API，用于获取刚体状态并施加力
 #include <gazebo/physics/physics.hh>
 #include <gazebo/common/Plugin.hh>
 #include <gazebo/common/Events.hh>
+#include <gazebo/transport/TransportTypes.hh>
+#include <gazebo/transport/transport.hh>
 
 namespace gazebo
 {
@@ -35,8 +36,8 @@ private:
   /// Gazebo 物理步回调，线程 B，~1000 Hz，是Gazebo自己的物理步频率
   void OnUpdate(const common::UpdateInfo &_info);
 
-  /// ROS 洋流回调，线程A，频率由外部洋流发布者决定
-  void OnCurrentReceived(const geometry_msgs::Twist::ConstPtr &_msg);
+  /// Gazebo transport 洋流回调，与物理引擎同步
+  void OnCurrentReceived(ConstVector3dPtr &_msg);
 
   //   Gazebo 句柄  
   physics::ModelPtr model_;
@@ -44,9 +45,12 @@ private:
   physics::JointPtr controlJoint_;   // 可选，舵面控制关节
   event::ConnectionPtr updateConnection_;
 
-  //   ROS 通信  
+  //   Gazebo transport（洋流输入）
+  transport::NodePtr gazeboNode_;
+  transport::SubscriberPtr currentSub_;
+
+  //   ROS 通信（调试输出）
   std::unique_ptr<ros::NodeHandle> rosNode_;
-  ros::Subscriber currentSub_;
   ros::Publisher debugForcePub_;     // 调试用发布升阻力
 
   //   线程安全的洋流缓冲  

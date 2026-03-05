@@ -144,7 +144,7 @@
     <!--为适应较深海面，海底复制-->
     <model name="seabed_main">
       <static>true</static>
-      <pose>0 0 -200 0 0 0</pose>
+      <pose>0 0 -50 0 0 0</pose>
 
 
         <include>
@@ -299,35 +299,8 @@
     </model>
     <!--海底复制-->
 
-    <plugin name="underwater_current_plugin" filename="libuuv_underwater_current_ros_plugin.so">
-      <namespace>hydrodynamics</namespace>
-      <constant_current>
-        <topic>current_velocity</topic>
-        <velocity>
-          <mean>0</mean>  <!--目前洋流速度先设置为0-->
-          <min>0</min>
-          <max>5</max>
-          <mu>0.0</mu>
-          <noiseAmp>0.0</noiseAmp>
-        </velocity>
-
-        <horizontal_angle>
-          <mean>0</mean>
-          <min>-3.141592653589793238</min>
-          <max>3.141592653589793238</max>
-          <mu>0.0</mu>
-          <noiseAmp>0.0</noiseAmp>
-        </horizontal_angle>
-
-        <vertical_angle>
-          <mean>0</mean>
-          <min>-3.141592653589793238</min>
-          <max>3.141592653589793238</max>
-          <mu>0.0</mu>
-          <noiseAmp>0.0</noiseAmp>
-        </vertical_angle>
-      </constant_current>
-    </plugin>
+    <!-- 洋流已迁移到 UGOceanCurrentPlugin (ModelPlugin)，不再使用 WorldPlugin -->
+    <!-- 原 libuuv_underwater_current_ros_plugin.so 已移除 -->
 
     <plugin name="sc_interface" filename="libuuv_sc_ros_interface_plugin.so"/>
 

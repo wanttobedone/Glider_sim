@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
   geometry_msgs
+  visualization_msgs
   message_generation
   gazebo_ros
 )
@@ -20,6 +21,7 @@ find_package(gazebo REQUIRED)
 add_message_files(
   FILES
   BuoyancyEngineStatus.msg
+  LiftDragDebug.msg
 )
 
 generate_messages(
@@ -31,8 +33,8 @@ generate_messages(
 ## Catkin package
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES buoyancy_engine_plugin ug_liftdrag_hydro_plugin
-  CATKIN_DEPENDS roscpp std_msgs geometry_msgs message_runtime gazebo_ros
+  LIBRARIES buoyancy_engine_plugin ug_liftdrag_hydro_plugin ug_ocean_current_plugin
+  CATKIN_DEPENDS roscpp std_msgs geometry_msgs visualization_msgs message_runtime gazebo_ros
   DEPENDS GAZEBO
 )
 
@@ -75,8 +77,23 @@ add_dependencies(ug_liftdrag_hydro_plugin
   ${catkin_EXPORTED_TARGETS}
 )
 
+## Build the ocean current plugin
+add_library(ug_ocean_current_plugin
+  src/UGOceanCurrentPlugin.cc
+)
+
+target_link_libraries(ug_ocean_current_plugin
+  ${catkin_LIBRARIES}
+  ${GAZEBO_LIBRARIES}
+)
+
+add_dependencies(ug_ocean_current_plugin
+  ${${PROJECT_NAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
 ## Install
-install(TARGETS buoyancy_engine_plugin ug_liftdrag_hydro_plugin
+install(TARGETS buoyancy_engine_plugin ug_liftdrag_hydro_plugin ug_ocean_current_plugin
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 )
 
