@@ -12,6 +12,13 @@ pitch:
   ki: 0.00
   kd: 0.05
 
+# Roll PID，共用，输出电池旋转角度 [rad]
+# 目标 roll 默认为 0（保持水平）
+roll:
+  kp: 0.5
+  ki: 0.1
+  kd: 1.0
+
 # Heading PID，共用
 # 输出舵角[rad], 范围 [-0.52, +0.52]在control_node定义
 heading:

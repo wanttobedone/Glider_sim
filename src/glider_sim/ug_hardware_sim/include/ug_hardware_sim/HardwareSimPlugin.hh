@@ -51,6 +51,7 @@ private:
 
   physics::ModelPtr model_;
   physics::JointPtr batteryJoint_;
+  physics::JointPtr batteryRollJoint_;
   physics::JointPtr rudderJoint_;
   event::ConnectionPtr updateConnection_;
 
@@ -73,6 +74,11 @@ private:
   double ballastMinVol_;
   double ballastMaxVol_;
 
+  // 电池旋转参数
+  double batteryRollAlpha_;
+  double batteryRollMinAngle_;
+  double batteryRollMaxAngle_;
+
   // 尾舵参数
   double rudderAlpha_;
   double rudderMinAngle_;
@@ -83,16 +89,19 @@ private:
 
   // 安全状态
   double safeBatteryPos_;
+  double safeBatteryRollAngle_;
   double safeBallastVol_;
   double safeRudderAngle_;
 
   // 当前实际状态（经过动力学滤波）
   double currentBatteryPos_;
+  double currentBatteryRollAngle_;
   double currentBallastVol_;
   double currentRudderAngle_;
 
   // 目标状态（来自控制层指令）
   double targetBatteryPos_;
+  double targetBatteryRollAngle_;
   double targetBallastVol_;
   double targetRudderAngle_;
 

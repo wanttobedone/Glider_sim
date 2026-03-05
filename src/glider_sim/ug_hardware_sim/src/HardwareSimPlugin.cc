@@ -22,6 +22,9 @@ HardwareSimPlugin::HardwareSimPlugin()
     : batteryMaxSpeed_(0.01),
       batteryMinPos_(-0.03385),
       batteryMaxPos_(0.03385),
+      batteryRollAlpha_(0.3),
+      batteryRollMinAngle_(-1.57),
+      batteryRollMaxAngle_(1.57),
       ballastPumpRate_(0.0001),
       ballastMinVol_(0.0),
       ballastMaxVol_(0.001),
@@ -30,12 +33,15 @@ HardwareSimPlugin::HardwareSimPlugin()
       rudderMaxAngle_(0.52),
       watchdogTimeout_(1.0),
       safeBatteryPos_(0.0),
+      safeBatteryRollAngle_(0.0),
       safeBallastVol_(0.0005),
       safeRudderAngle_(0.0),
       currentBatteryPos_(0.0),
+      currentBatteryRollAngle_(0.0),
       currentBallastVol_(0.0005),
       currentRudderAngle_(0.0),
       targetBatteryPos_(0.0),
+      targetBatteryRollAngle_(0.0),
       targetBallastVol_(0.0005),
       targetRudderAngle_(0.0),
       namespace_("")
@@ -64,19 +70,28 @@ void HardwareSimPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   // 获取关节
   std::string batteryJointName = this->namespace_ + "/battery_joint";
+  std::string batteryRollJointName = this->namespace_ + "/battery_roll_joint";
   std::string rudderJointName = this->namespace_ + "/rudder_joint";
 
   if (_sdf->HasElement("battery_joint"))
     batteryJointName = _sdf->Get<std::string>("battery_joint");
+  if (_sdf->HasElement("battery_roll_joint"))
+    batteryRollJointName = _sdf->Get<std::string>("battery_roll_joint");
   if (_sdf->HasElement("rudder_joint"))
     rudderJointName = _sdf->Get<std::string>("rudder_joint");
 
   this->batteryJoint_ = this->model_->GetJoint(batteryJointName);
+  this->batteryRollJoint_ = this->model_->GetJoint(batteryRollJointName);
   this->rudderJoint_ = this->model_->GetJoint(rudderJointName);
 
   if (!this->batteryJoint_)
   {
     gzerr << "[HardwareSim] 找不到电池关节: " << batteryJointName << std::endl;
+    return;
+  }
+  if (!this->batteryRollJoint_)
+  {
+    gzerr << "[HardwareSim] 找不到电池旋转关节: " << batteryRollJointName << std::endl;
     return;
   }
   if (!this->rudderJoint_)
@@ -86,6 +101,7 @@ void HardwareSimPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   }
 
   gzmsg << "[HardwareSim] 电池关节: " << this->batteryJoint_->GetName() << std::endl;
+  gzmsg << "[HardwareSim] 电池旋转关节: " << this->batteryRollJoint_->GetName() << std::endl;
   gzmsg << "[HardwareSim] 尾舵关节: " << this->rudderJoint_->GetName() << std::endl;
 
   // 初始化 ROS
@@ -103,6 +119,11 @@ void HardwareSimPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   this->nh_->param("hardware_sim/battery/max_position", this->batteryMaxPos_, 0.03385);
   this->nh_->param("hardware_sim/battery/initial_position", this->currentBatteryPos_, 0.0);
 
+  this->nh_->param("hardware_sim/battery_roll/alpha", this->batteryRollAlpha_, 0.3);
+  this->nh_->param("hardware_sim/battery_roll/min_angle", this->batteryRollMinAngle_, -1.57);
+  this->nh_->param("hardware_sim/battery_roll/max_angle", this->batteryRollMaxAngle_, 1.57);
+  this->nh_->param("hardware_sim/battery_roll/initial_angle", this->currentBatteryRollAngle_, 0.0);
+
   this->nh_->param("hardware_sim/ballast/pump_rate", this->ballastPumpRate_, 0.0001);
   this->nh_->param("hardware_sim/ballast/min_volume", this->ballastMinVol_, 0.0);
   this->nh_->param("hardware_sim/ballast/max_volume", this->ballastMaxVol_, 0.001);
@@ -116,16 +137,19 @@ void HardwareSimPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   this->nh_->param("hardware_sim/watchdog/timeout", this->watchdogTimeout_, 1.0);
 
   this->nh_->param("hardware_sim/safe_state/battery_position", this->safeBatteryPos_, 0.0);
+  this->nh_->param("hardware_sim/safe_state/battery_roll_angle", this->safeBatteryRollAngle_, 0.0);
   this->nh_->param("hardware_sim/safe_state/ballast_volume", this->safeBallastVol_, 0.0005);
   this->nh_->param("hardware_sim/safe_state/rudder_angle", this->safeRudderAngle_, 0.0);
 
   // 初始化目标 = 当前
   this->targetBatteryPos_ = this->currentBatteryPos_;
+  this->targetBatteryRollAngle_ = this->currentBatteryRollAngle_;
   this->targetBallastVol_ = this->currentBallastVol_;
   this->targetRudderAngle_ = this->currentRudderAngle_;
 
   // 设置关节初始位置
   this->batteryJoint_->SetPosition(0, this->currentBatteryPos_, true);
+  this->batteryRollJoint_->SetPosition(0, this->currentBatteryRollAngle_, true);
   this->rudderJoint_->SetPosition(0, this->currentRudderAngle_, true);
 
   // ROS 话题
@@ -163,9 +187,11 @@ void HardwareSimPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 void HardwareSimPlugin::Reset()
 {
   this->currentBatteryPos_ = 0.0;
+  this->currentBatteryRollAngle_ = 0.0;
   this->currentBallastVol_ = 0.0005;
   this->currentRudderAngle_ = 0.0;
   this->targetBatteryPos_ = 0.0;
+  this->targetBatteryRollAngle_ = 0.0;
   this->targetBallastVol_ = 0.0005;
   this->targetRudderAngle_ = 0.0;
   this->lastUpdateTime_ = this->model_->GetWorld()->SimTime();
@@ -188,6 +214,7 @@ void HardwareSimPlugin::OnUpdate(const common::UpdateInfo &_info)
     if (timeSinceCmd > this->watchdogTimeout_)
     {
       this->targetBatteryPos_ = this->safeBatteryPos_;
+      this->targetBatteryRollAngle_ = this->safeBatteryRollAngle_;
       this->targetBallastVol_ = this->safeBallastVol_;
       this->targetRudderAngle_ = this->safeRudderAngle_;
 
@@ -209,6 +236,13 @@ void HardwareSimPlugin::OnUpdate(const common::UpdateInfo &_info)
   this->currentBatteryPos_ = std::max(this->batteryMinPos_,
                                        std::min(this->batteryMaxPos_, this->currentBatteryPos_));
 
+  // 电池旋转，一阶滞后
+  this->currentBatteryRollAngle_ = ApplyFirstOrderLag(
+      this->currentBatteryRollAngle_, this->targetBatteryRollAngle_,
+      this->batteryRollAlpha_);
+  this->currentBatteryRollAngle_ = std::max(this->batteryRollMinAngle_,
+                                             std::min(this->batteryRollMaxAngle_, this->currentBatteryRollAngle_));
+
   // 油囊，速率限制
   this->currentBallastVol_ = ApplyRateLimiter(
       this->currentBallastVol_, this->targetBallastVol_,
@@ -225,6 +259,7 @@ void HardwareSimPlugin::OnUpdate(const common::UpdateInfo &_info)
 
   // 驱动Gazebo 关节 (preserveWorldVelocity = true)
   this->batteryJoint_->SetPosition(0, this->currentBatteryPos_, true);
+  this->batteryRollJoint_->SetPosition(0, this->currentBatteryRollAngle_, true);
   this->rudderJoint_->SetPosition(0, this->currentRudderAngle_, true);
 
   // 发布实际体积给浮力引擎插件
@@ -236,11 +271,15 @@ void HardwareSimPlugin::OnUpdate(const common::UpdateInfo &_info)
   sensor_msgs::JointState jsMsg;
   jsMsg.header.stamp = ros::Time::now();
   jsMsg.name.push_back(this->batteryJoint_->GetName());
+  jsMsg.name.push_back(this->batteryRollJoint_->GetName());
   jsMsg.name.push_back(this->rudderJoint_->GetName());
   jsMsg.position.push_back(this->currentBatteryPos_);
+  jsMsg.position.push_back(this->currentBatteryRollAngle_);
   jsMsg.position.push_back(this->currentRudderAngle_);
   jsMsg.velocity.push_back(0.0);
   jsMsg.velocity.push_back(0.0);
+  jsMsg.velocity.push_back(0.0);
+  jsMsg.effort.push_back(0.0);
   jsMsg.effort.push_back(0.0);
   jsMsg.effort.push_back(0.0);
   this->jointStatePub_.publish(jsMsg);
@@ -249,6 +288,7 @@ void HardwareSimPlugin::OnUpdate(const common::UpdateInfo &_info)
   ug_msgs::ActuatorState stateMsg;
   stateMsg.header.stamp = ros::Time::now();
   stateMsg.battery_position = this->currentBatteryPos_;
+  stateMsg.battery_roll_angle = this->currentBatteryRollAngle_;
   stateMsg.ballast_volume = this->currentBallastVol_;
   stateMsg.rudder_angle = this->currentRudderAngle_;
   this->statePub_.publish(stateMsg);
@@ -258,6 +298,7 @@ void HardwareSimPlugin::OnUpdate(const common::UpdateInfo &_info)
 void HardwareSimPlugin::OnActuatorCmd(const ug_msgs::ActuatorCmd::ConstPtr &_msg)
 {
   this->targetBatteryPos_ = _msg->battery_position;
+  this->targetBatteryRollAngle_ = _msg->battery_roll_angle;
   this->targetBallastVol_ = _msg->ballast_volume;
   this->targetRudderAngle_ = _msg->rudder_angle;
   this->lastCmdTime_ = ros::Time::now();

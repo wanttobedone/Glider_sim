@@ -79,14 +79,32 @@
       </inertial>
     </link>
 
-    <!-- 电池滑块，目前只能前后移动 -->
+    <!-- 电池滑块（虚拟中间 link，仅用于串联 prismatic + revolute 两个自由度） -->
+    <link name="${namespace}/battery_slide_link">
+      <inertial>
+        <mass value="1e-6"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="1e-8" ixy="0" ixz="0" iyy="1e-8" iyz="0" izz="1e-8"/>
+      </inertial>
+    </link>
+
+    <!-- 电池前后平移，控制 pitch -->
+    <joint name="${namespace}/battery_joint" type="prismatic">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/battery_slide_link"/>
+      <origin xyz="${battery_x_origin} 0 -0.05" rpy="0 0 0"/>
+      <axis xyz="1 0 0"/>
+      <limit lower="${-battery_travel}" upper="${battery_travel}" effort="100" velocity="0.05"/>
+      <dynamics damping="10.0" friction="1.0"/>
+    </joint>
+
+    <!-- 电池本体，质心偏离旋转轴 0.03m（向下），旋转时质心侧移产生 roll 力矩 -->
     <link name="${namespace}/battery_link">
       <inertial>
         <mass value="${battery_mass}"/>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <origin xyz="0 0 -0.03" rpy="0 0 0"/>
         <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
       </inertial>
-      <!-- 调试用可视化 (小方块表示电池包) -->
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
@@ -104,13 +122,14 @@
       </collision>
     </link>
 
-    <joint name="${namespace}/battery_joint" type="prismatic">
-      <parent link="${namespace}/base_link"/>
+    <!-- 电池绕纵轴旋转，控制 roll -->
+    <joint name="${namespace}/battery_roll_joint" type="revolute">
+      <parent link="${namespace}/battery_slide_link"/>
       <child link="${namespace}/battery_link"/>
-      <origin xyz="${battery_x_origin} 0 -0.05" rpy="0 0 0"/>  <!-- assume电池z向质心与hull一样 -->
-      <axis xyz="1 0 0"/>  <!-- 沿X轴滑动 (前后方向)，后续再添加roll控制 -->
-      <limit lower="${-battery_travel}" upper="${battery_travel}" effort="100" velocity="0.05"/>
-      <dynamics damping="10.0" friction="1.0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="1 0 0"/>
+      <limit lower="-1.57" upper="1.57" effort="50" velocity="1.0"/>
+      <dynamics damping="0.5" friction="0.1"/>
     </joint>
 
     <!-- 尾舵  -->

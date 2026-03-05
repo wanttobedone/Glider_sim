@@ -13,6 +13,7 @@
       <plugin name="${namespace}_hardware_sim" filename="libhardware_sim_plugin.so">
         <namespace>${namespace}</namespace>
         <battery_joint>${namespace}/battery_joint</battery_joint>
+        <battery_roll_joint>${namespace}/battery_roll_joint</battery_roll_joint>
         <rudder_joint>${namespace}/rudder_joint</rudder_joint>
       </plugin>
     </gazebo>

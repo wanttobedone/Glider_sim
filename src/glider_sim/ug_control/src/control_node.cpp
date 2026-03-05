@@ -9,14 +9,17 @@
  *     油囊前馈(带死区), depth误差，调整油囊体积
  * 
  *     Heading PID, cmd/heading调整舵角
+ *     Roll PID, 目标roll默认0，电池旋转修正roll偏差
  * 订阅话题，namespace现在为ug_glider:
  *   /{ns}/glider_state       (GliderState, 来自状态转换节点)
  *   /{ns}/actuator_state     (ActuatorState, 来自硬件层反馈)
  *   /{ns}/cmd/pitch          (Float64, 目标俯仰角 [rad], 仅手动模式)
  *   /{ns}/cmd/heading        (Float64, 目标航向 [rad])
  *   /{ns}/cmd/depth          (Float64, 目标深度 [m])
+ *   /{ns}/cmd/roll           (Float64, 目标横滚角 [rad], 默认0)
  *   /{ns}/cmd/mode           (Int32, 0=MANUAL, 1=CASCADE)
  *   /{ns}/cmd/battery_direct (Float64, 直接设定电池位置 [m], 仅手动模式, 覆盖pitch PID)
+ *   /{ns}/cmd/battery_roll_direct (Float64, 直接设定电池旋转角 [rad], 仅手动模式, 覆盖roll PID)
  *   /{ns}/cmd/ballast_direct (Float64, 直接设定油囊体积 [m³], 仅手动模式, 覆盖depth PID)
  *   /{ns}/cmd/rudder_direct  (Float64, 直接设定舵角 [rad], 仅手动模式, 覆盖heading PID)
  * 发布话题:  /{ns}/actuator_cmd       (ActuatorCmd, 发给硬件层)
@@ -60,6 +63,14 @@ public:
     headingPID_.setOutputLimits(-0.52, 0.52);  // 舵角范围 [rad]
     headingPID_.setIntegralLimits(0.3);
 
+    // Roll PID参数，两种模式共用，输出电池旋转角度
+    nh.param("roll/kp", kp, 5.0);
+    nh.param("roll/ki", ki, 0.1);
+    nh.param("roll/kd", kd, 1.0);
+    rollPID_.setGains(kp, ki, kd);
+    rollPID_.setOutputLimits(-1.57, 1.57);  // 电池旋转范围 [rad]
+    rollPID_.setIntegralLimits(1.0);
+
     // 手动模式Depth PID，直接输出油囊体积的大小
     nh.param("depth/kp", kp, 0.001);
     nh.param("depth/ki", ki, 0.0);
@@ -98,10 +109,12 @@ public:
     cmdPitchSub_ = nhNs.subscribe("cmd/pitch", 1, &ControlNode::onCmdPitch, this);
     cmdHeadingSub_ = nhNs.subscribe("cmd/heading", 1, &ControlNode::onCmdHeading, this);
     cmdDepthSub_ = nhNs.subscribe("cmd/depth", 1, &ControlNode::onCmdDepth, this);
+    cmdRollSub_ = nhNs.subscribe("cmd/roll", 1, &ControlNode::onCmdRoll, this);
     cmdModeSub_ = nhNs.subscribe("cmd/mode", 1, &ControlNode::onCmdMode, this);
 
     // 手动模式下的直接执行器控制话题，现在会覆盖对应 PID 输出
     batteryDirectSub_ = nhNs.subscribe("cmd/battery_direct", 1, &ControlNode::onBatteryDirect, this);
+    batteryRollDirectSub_ = nhNs.subscribe("cmd/battery_roll_direct", 1, &ControlNode::onBatteryRollDirect, this);
     ballastDirectSub_ = nhNs.subscribe("cmd/ballast_direct", 1, &ControlNode::onBallastDirect, this);
     rudderDirectSub_ = nhNs.subscribe("cmd/rudder_direct", 1, &ControlNode::onRudderDirect, this);
 
@@ -115,6 +128,7 @@ public:
     targetPitch_ = 0.0;
     targetHeading_ = 0.0;
     targetDepth_ = 0.0;
+    targetRoll_ = 0.0;
     stateReceived_ = false;
 
     ROS_INFO("[Control] 控制节点已启动, 频率: %.0f Hz, 模式: %s",
@@ -148,6 +162,11 @@ private:
     targetDepth_ = msg->data;
   }
 
+  void onCmdRoll(const std_msgs::Float64::ConstPtr &msg)
+  {
+    targetRoll_ = msg->data;
+  }
+
   void onCmdMode(const std_msgs::Int32::ConstPtr &msg)
   {
     int newMode = msg->data;
@@ -155,10 +174,12 @@ private:
     {
       // Bumpless transfer: reset 所有 PID 积分器和微分历史
       pitchPID_.reset();
+      rollPID_.reset();
       depthOuterPID_.reset();
       depthPID_.reset();
       // 清除直接控制标志
       batteryDirectActive_ = false;
+      batteryRollDirectActive_ = false;
       ballastDirectActive_ = false;
       rudderDirectActive_ = false;
       controlMode_ = newMode;
@@ -170,6 +191,12 @@ private:
   {
     batteryDirectValue_ = msg->data;
     batteryDirectActive_ = true;
+  }
+
+  void onBatteryRollDirect(const std_msgs::Float64::ConstPtr &msg)
+  {
+    batteryRollDirectValue_ = msg->data;
+    batteryRollDirectActive_ = true;
   }
 
   void onBallastDirect(const std_msgs::Float64::ConstPtr &msg)
@@ -199,6 +226,11 @@ private:
     while (headingError > M_PI) headingError -= 2.0 * M_PI;
     while (headingError < -M_PI) headingError += 2.0 * M_PI;
     cmd.rudder_angle = headingPID_.compute(headingError, dt);
+
+    // Roll由电池旋转控制（两种模式共用，目标默认0）
+    // 取反：电池旋转正方向与 roll 修正方向相反
+    double rollError = targetRoll_ - currentState_.roll;
+    cmd.battery_roll_angle = -rollPID_.compute(rollError, dt);
 
     if (controlMode_ == 1)
     {
@@ -250,10 +282,13 @@ private:
       }
     }
 
-    // Heading舵角，可被 cmd/rudder_direct 覆盖，仅手动模式
-    if (controlMode_ == 0 && rudderDirectActive_)
+    // 手动模式直接覆盖
+    if (controlMode_ == 0)
     {
-      cmd.rudder_angle = std::max(-0.52, std::min(0.52, rudderDirectValue_));
+      if (rudderDirectActive_)
+        cmd.rudder_angle = std::max(-0.52, std::min(0.52, rudderDirectValue_));
+      if (batteryRollDirectActive_)
+        cmd.battery_roll_angle = std::max(-1.57, std::min(1.57, batteryRollDirectValue_));
     }
 
     cmdPub_.publish(cmd);
@@ -285,29 +320,31 @@ private:
   int debugCounter_ = 0;
   ros::NodeHandle nh_;
   ros::Subscriber stateSub_, actuatorStateSub_;
-  ros::Subscriber cmdPitchSub_, cmdHeadingSub_, cmdDepthSub_, cmdModeSub_;
-  ros::Subscriber batteryDirectSub_, ballastDirectSub_, rudderDirectSub_;
+  ros::Subscriber cmdPitchSub_, cmdHeadingSub_, cmdDepthSub_, cmdRollSub_, cmdModeSub_;
+  ros::Subscriber batteryDirectSub_, batteryRollDirectSub_, ballastDirectSub_, rudderDirectSub_;
   ros::Publisher cmdPub_;
   ros::Timer controlTimer_;
 
   // PID 控制器
-  ug_control::PIDController pitchPID_, headingPID_;
+  ug_control::PIDController pitchPID_, headingPID_, rollPID_;
   ug_control::PIDController depthPID_;        // 手动模式: depth → 油囊体积
   ug_control::PIDController depthOuterPID_;   // 级联模式: depth → 目标pitch角
 
   ug_msgs::GliderState currentState_;
   ug_msgs::ActuatorState currentActuator_;
 
-  double targetPitch_, targetHeading_, targetDepth_;
+  double targetPitch_, targetHeading_, targetDepth_, targetRoll_;
   double neutralVolume_;
   double controlRate_;
   bool stateReceived_;
 
   // 手动模式直接控制
   double batteryDirectValue_ = 0.0;
+  double batteryRollDirectValue_ = 0.0;
   double ballastDirectValue_ = 0.0005;
   double rudderDirectValue_ = 0.0;
   bool batteryDirectActive_ = false;
+  bool batteryRollDirectActive_ = false;
   bool ballastDirectActive_ = false;
   bool rudderDirectActive_ = false;
 

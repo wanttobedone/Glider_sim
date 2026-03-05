@@ -4,6 +4,7 @@
   包含Fossen水动力模型、浮力、翼面升力/阻力、方向舵升力/阻力
   uuv_sim的fin插件不适配Gazebo 11，目前使用Gazebo自带插件，后续自己开发，这个已经实现，固定翼和转向舵都挂载升阻力插件
 -->
+<!--为演示，尾舵cp挂载在z=质心，这样roll就可以暂不处理，后续再处理-->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <!-- 水动力参数 (TODO: 填入实际数据) -->
@@ -173,7 +174,7 @@
 
         <fluid_density>${fluid_density}</fluid_density>
         <area>${rudder_area}</area>
-        <cp>-0.417 0 0.09</cp>
+        <cp>-0.417 0 -0.05</cp><!--为演示，尾舵z位置质心，这样roll就可以暂不处理，后续再处理-->
         <forward>1 0 0</forward>
         <upward>0 1 0</upward>
 
@@ -193,12 +194,12 @@
 
     <!-- 分层洋流插件 -->
     <!-- 根据滑翔机深度实时插值洋流，同时发布到 Gazebo transport用于物理计算和 ROS用于调试 -->
-    <!-- 数据源：SDF <layer> 标签（简单模式）或 CS  <!-- 简单模式：ENU 分层表 (vx=东, vy=北, vz=上) -->
+    <!-- 数据源：SDF <layer> 标签（简单模式）或 简单模式：ENU 分层表 (vx=东, vy=北, vz=上) -->
         <layer depth="0"   vx="0.1"  vy="0.0" vz="0.0"/>
         <layer depth="10"  vx="0.08" vy="0.0" vz="0.0"/>
         <layer depth="20"  vx="0.03" vy="0.0" vz="0.0"/>
         <layer depth="30"  vx="0.0"  vy="0.0" vz="0.0"/>
-V 文件（真实海洋数据模式），CSV是DAVE开发用到的格式，要有个脚本把CFD数据转成CSV -->
+<!--文件（真实海洋数据模式），CSV是DAVE开发用到的格式，要有个脚本把CFD数据转成CSV -->
     <gazebo>
       <plugin name="${namespace}_ocean_current" filename="libug_ocean_current_plugin.so">
         <namespace>${namespace}</namespace>

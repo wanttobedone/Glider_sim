@@ -6,3 +6,4 @@ Header header
 float64 battery_position     # 电池实际位置 [m]
 float64 ballast_volume       # 油囊实际体积 [m^3]
 float64 rudder_angle         # 尾舵实际角度 [rad]
+float64 battery_roll_angle   # 电池旋转实际角度 [rad]
