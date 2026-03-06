@@ -48,7 +48,8 @@ public:
                                 &MissionNode::onGliderState, this);
     targetSub_ = nhNs.subscribe("mission/target", 1,
                                  &MissionNode::onTarget, this);
-    navGoalSub_ = nh_.subscribe("/move_base_simple/goal", 1,
+    // 多机模式下订阅带 namespace 的话题，避免多机冲突
+    navGoalSub_ = nhNs.subscribe("move_base_simple/goal", 1,
                                  &MissionNode::onNavGoal, this);
 
     // 发布

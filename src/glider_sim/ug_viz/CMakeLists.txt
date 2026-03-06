@@ -30,8 +30,13 @@ add_executable(target_marker_node src/target_marker_node.cpp)
 target_link_libraries(target_marker_node ${catkin_LIBRARIES})
 add_dependencies(target_marker_node ${catkin_EXPORTED_TARGETS})
 
+# 编队可视化节点
+add_executable(swarm_viz_node src/swarm_viz_node.cpp)
+target_link_libraries(swarm_viz_node ${catkin_LIBRARIES})
+add_dependencies(swarm_viz_node ${catkin_EXPORTED_TARGETS})
+
 # 安装
-install(TARGETS glider_viz_node target_marker_node
+install(TARGETS glider_viz_node target_marker_node swarm_viz_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
@@ -45,5 +50,6 @@ install(DIRECTORY launch/
 
 catkin_install_python(PROGRAMS
   scripts/glider_dashboard
+  scripts/swarm_dashboard
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

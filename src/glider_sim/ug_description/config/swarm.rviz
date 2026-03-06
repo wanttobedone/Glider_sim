@@ -1,0 +1,223 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 85
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /Glider 0 Model1
+        - /Glider 1 Model1
+        - /Swarm Trajectories1
+      Splitter Ratio: 0.5
+    Tree Height: 1109
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 100; 100; 100
+      Enabled: true
+      Line Style:
+        Line Width: 0.019999999552965164
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+      Value: true
+
+    # ── Glider 0（黄色）──
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: Glider 0 Model
+      Robot Description: /ug_glider_0/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /ug_glider_0/viz/markers
+      Name: G0 Markers
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /ug_glider_0/viz/status_text
+      Name: G0 Status Text
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /ug_glider_0/ocean_current_markers
+      Name: G0 Ocean Current
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: true
+
+    # ── Glider 1（红色）──
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+      Name: Glider 1 Model
+      Robot Description: /ug_glider_1/robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /ug_glider_1/viz/markers
+      Name: G1 Markers
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /ug_glider_1/viz/status_text
+      Name: G1 Status Text
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /ug_glider_1/ocean_current_markers
+      Name: G1 Ocean Current
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: true
+
+    # ── TF ──
+    - Class: rviz/TF
+      Enabled: false
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+      Marker Alpha: 1
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {}
+      Update Interval: 0
+      Value: false
+
+    # ── Swarm 可视化 ──
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /swarm/trajectories
+      Name: Swarm Trajectories
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /swarm/waypoints
+      Name: Swarm Waypoints
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: true
+    - Class: rviz/Map
+      Alpha: 0.5
+      Color Scheme: map
+      Draw Behind: true
+      Enabled: true
+      Name: Coverage Grid
+      Topic: /swarm/coverage_grid
+      Unreliable: false
+      Use Timestamp: false
+      Value: true
+
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Default Light: true
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 150
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 100
+        Y: 0
+        Z: -15
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.5
+      Target Frame: world
+      Yaw: 3.14
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 1369
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd000000010000000000000161000004f1fc0200000002fb000000100044006900730070006c0061007900730100000047000004f1000000f100fffffffb0000000a0056006900650077007300000001eb00000114000000c200ffffff00000374000004f100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Views:
+    collapsed: false
+  Width: 1244
+  X: 72
+  Y: 34

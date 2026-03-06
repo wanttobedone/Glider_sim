@@ -222,13 +222,14 @@ private:
     cmd.header.stamp = ros::Time::now();
 
     // Heading由舵角控制
+    //取反
     double headingError = targetHeading_ - currentState_.yaw;
     while (headingError > M_PI) headingError -= 2.0 * M_PI;
     while (headingError < -M_PI) headingError += 2.0 * M_PI;
-    cmd.rudder_angle = headingPID_.compute(headingError, dt);
+    cmd.rudder_angle = -headingPID_.compute(headingError, dt);
 
     // Roll由电池旋转控制（两种模式共用，目标默认0）
-    // 取反：电池旋转正方向与 roll 修正方向相反
+    // 取反，电池旋转正方向与 roll 修正方向相反
     double rollError = targetRoll_ - currentState_.roll;
     cmd.battery_roll_angle = -rollPID_.compute(rollError, dt);
 

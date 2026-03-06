@@ -1,0 +1,45 @@
+<!--
+  双滑翔机覆盖仿真完整启动
+  G0黄色，G1红色
+-->
+<launch>
+  <arg name="gui" default="true"/>
+  <arg name="rviz" default="true"/>
+  <arg name="paused" default="false"/>
+
+  <!-- 启动 Gazebo 世界，只启动一次 -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find dave_worlds)/worlds/dave_ocean_waves.world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="verbose" value="true"/>
+  </include>
+  <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
+  <!--由Gazebo的ENU改为NED-->
+
+  <!--  生成 Glider 0（黄色） -->
+  <include file="$(find ug_description)/launch/spawn_glider.launch">
+    <arg name="namespace" value="ug_glider_0"/>
+    <arg name="x" value="0"/>
+    <arg name="y" value="0"/>
+    <arg name="z" value="-0.116"/>
+    <arg name="hull_color" value="Yellow"/>
+  </include>
+
+  <!-- 生成 Glider 1（红色） -->
+  <include file="$(find ug_description)/launch/spawn_glider.launch">
+    <arg name="namespace" value="ug_glider_1"/>
+    <arg name="x" value="0"/>
+    <arg name="y" value="25"/>
+    <arg name="z" value="-0.116"/>
+    <arg name="hull_color" value="Red"/>
+  </include>
+
+  <!-- 编队任务层（规划器 + 可视化），也可单独 roslaunch ug_control swarm_mis.launch -->
+  <include file="$(find ug_control)/launch/swarm_mis.launch"/>
+
+  <!-- RViz（使用编队专用配置） -->
+  <node if="$(arg rviz)" name="rviz" pkg="rviz" type="rviz"
+        args="-d $(find ug_description)/config/swarm.rviz"/>
+</launch>

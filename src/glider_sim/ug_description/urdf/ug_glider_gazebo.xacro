@@ -66,7 +66,7 @@
 
   <!-- 宏定义 -->
 
-  <xacro:macro name="ug_glider_gazebo" params="namespace debug">
+  <xacro:macro name="ug_glider_gazebo" params="namespace debug hull_color:=Yellow">
     <!-- 水下插件 (Fossen水动力模型) -->
     <gazebo>
       <plugin name="${namespace}_uuv_plugin" filename="libuuv_underwater_object_ros_plugin.so">
@@ -195,9 +195,9 @@
     <!-- 分层洋流插件 -->
     <!-- 根据滑翔机深度实时插值洋流，同时发布到 Gazebo transport用于物理计算和 ROS用于调试 -->
     <!-- 数据源：SDF <layer> 标签（简单模式）或 简单模式：ENU 分层表 (vx=东, vy=北, vz=上) -->
-        <layer depth="0"   vx="0.1"  vy="0.0" vz="0.0"/>
-        <layer depth="10"  vx="0.08" vy="0.0" vz="0.0"/>
-        <layer depth="20"  vx="0.03" vy="0.0" vz="0.0"/>
+        <layer depth="0"   vx="0.0"  vy="0.0" vz="0.0"/>
+        <layer depth="10"  vx="0.0" vy="0.0" vz="0.0"/>
+        <layer depth="20"  vx="0.0" vy="0.0" vz="0.0"/>
         <layer depth="30"  vx="0.0"  vy="0.0" vz="0.0"/>
 <!--文件（真实海洋数据模式），CSV是DAVE开发用到的格式，要有个脚本把CFD数据转成CSV -->
     <gazebo>
@@ -245,7 +245,7 @@
 
     <!-- Gazebo 材质颜色 -->
     <gazebo reference="${namespace}/base_link">
-      <material>Gazebo/Yellow</material>
+      <material>Gazebo/${hull_color}</material>
     </gazebo>
 
     <gazebo reference="${namespace}/rudder_link">

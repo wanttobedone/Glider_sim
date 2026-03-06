@@ -1,0 +1,48 @@
+<!--
+  生成一台滑翔机（不启动 Gazebo 世界）
+  用于多机仿真，先启动一次 Gazebo world，然后多次调用此 launch 生成不同 namespace 的滑翔机
+-->
+<launch>
+  <arg name="namespace"/>
+  <arg name="x" default="0"/>
+  <arg name="y" default="0"/>
+  <arg name="z" default="-0.126"/>
+  <arg name="roll" default="0"/>
+  <arg name="pitch" default="0.0"/>
+  <arg name="yaw" default="0"/>
+  <arg name="debug" default="0"/>
+  <arg name="hull_color" default="Yellow"/>
+  <arg name="control" default="true"/>
+  <arg name="mission" default="true"/>
+
+  <!-- 生成 URDF 模型 -->
+  <include file="$(find ug_description)/launch/upload_glider.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+    <arg name="x" value="$(arg x)"/>
+    <arg name="y" value="$(arg y)"/>
+    <arg name="z" value="$(arg z)"/>
+    <arg name="roll" value="$(arg roll)"/>
+    <arg name="pitch" value="$(arg pitch)"/>
+    <arg name="yaw" value="$(arg yaw)"/>
+    <arg name="debug" value="$(arg debug)"/>
+    <arg name="hull_color" value="$(arg hull_color)"/>
+  </include>
+
+  <!-- 硬件参数 -->
+  <group ns="$(arg namespace)">
+    <rosparam file="$(find ug_hardware_sim)/config/hardware_params.yaml"
+              command="load" ns="hardware_sim"/>
+  </group>
+
+  <!-- 控制层 -->
+  <include if="$(arg control)"
+           file="$(find ug_control)/launch/control.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+    <arg name="mission" value="$(arg mission)"/>
+  </include>
+
+  <!-- 可视化节点 -->
+  <node name="glider_viz_$(arg namespace)" pkg="ug_viz" type="glider_viz_node" output="screen">
+    <param name="namespace" value="$(arg namespace)"/>
+  </node>
+</launch>

@@ -11,6 +11,7 @@
   <arg name="pitch" default="0"/>
   <arg name="yaw" default="0"/>
   <arg name="debug" default="0"/>
+  <arg name="hull_color" default="Yellow"/>
   <arg name="use_sim_time" default="true"/>
 
   <!-- 使用仿真时间 -->
@@ -20,10 +21,11 @@
   <param name="$(arg namespace)/robot_description"
          command="$(find xacro)/xacro '$(find ug_description)/urdf/ug_glider.xacro'
                   namespace:=$(arg namespace)
-                  debug:=$(arg debug)"/>
+                  debug:=$(arg debug)
+                  hull_color:=$(arg hull_color)"/>
 
   <!-- 在 Gazebo 中生成模型 -->
-  <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+  <node name="$(arg namespace)_urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
         args="-urdf
               -x $(arg x) -y $(arg y) -z $(arg z)
               -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)

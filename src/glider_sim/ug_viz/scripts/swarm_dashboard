@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+双滑翔机编队仪表面板
+  上图：深度对比（Y 轴倒置，浅在上深在下）
+  下图：俯仰角对比
+  颜色：G0 荧光绿，G1 荧光蓝
+
+用法：rosrun ug_viz swarm_dashboard
+  或：rosrun ug_viz swarm_dashboard _namespaces:="ug_glider_0,ug_glider_1"
+"""
+
+import sys
+import math
+import collections
+import rospy
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel
+from PyQt5.QtCore import QTimer
+import pyqtgraph as pg
+
+from ug_msgs.msg import GliderState, MissionState
+
+# 滚动窗口长度（秒）
+WINDOW_SEC = 300
+# 采样周期（ms）
+SAMPLE_MS = 200
+# 最大数据点数
+MAX_POINTS = int(WINDOW_SEC / (SAMPLE_MS / 1000.0))
+
+COLORS = [
+    (50, 255, 50),    # 荧光绿
+    (50, 150, 255),   # 荧光蓝
+]
+NAMES = ['G0', 'G1']
+
+
+class GliderData:
+    """单台滑翔机的数据缓存"""
+    def __init__(self, ns, color, name):
+        self.ns = ns
+        self.color = color
+        self.name = name
+
+        self.depth = collections.deque(maxlen=MAX_POINTS)
+        self.pitch = collections.deque(maxlen=MAX_POINTS)
+        self.time = collections.deque(maxlen=MAX_POINTS)
+
+        self.latest = None
+        self.mission = None
+
+        self.state_sub = rospy.Subscriber(
+            '/{}/glider_state'.format(ns), GliderState, self._on_state)
+        self.mission_sub = rospy.Subscriber(
+            '/{}/mission/state'.format(ns), MissionState, self._on_mission)
+
+    def _on_state(self, msg):
+        self.latest = msg
+
+    def _on_mission(self, msg):
+        self.mission = msg
+
+    def sample(self, t):
+        if self.latest is None:
+            return
+        self.time.append(t)
+        self.depth.append(self.latest.depth)
+        self.pitch.append(math.degrees(self.latest.pitch))
+
+
+class SwarmDashboard(QMainWindow):
+    def __init__(self, namespaces):
+        super().__init__()
+        self.setWindowTitle('Swarm Dashboard')
+        self.resize(900, 600)
+
+        self.gliders = []
+        for i, ns in enumerate(namespaces):
+            ci = i % len(COLORS)
+            name = NAMES[i] if i < len(NAMES) else 'G{}'.format(i)
+            self.gliders.append(GliderData(ns, COLORS[ci], name))
+
+        self.t0 = rospy.Time.now().to_sec()
+
+        central = QWidget()
+        self.setCentralWidget(central)
+        layout = QVBoxLayout(central)
+
+        # 状态栏
+        self.status_label = QLabel('')
+        self.status_label.setStyleSheet('font-size: 13px; padding: 4px;')
+        layout.addWidget(self.status_label)
+
+        pg.setConfigOptions(antialias=True)
+
+        # 深度图
+        self.depth_plot = pg.PlotWidget(title='深度对比 Depth [m]')
+        self.depth_plot.setLabel('left', 'Depth', 'm')
+        self.depth_plot.setLabel('bottom', 'Time', 's')
+        self.depth_plot.invertY(True)
+        self.depth_plot.showGrid(x=True, y=True, alpha=0.3)
+        self.depth_plot.addLegend()
+        layout.addWidget(self.depth_plot)
+
+        # 俯仰角图
+        self.pitch_plot = pg.PlotWidget(title='俯仰角对比 Pitch [deg]')
+        self.pitch_plot.setLabel('left', 'Pitch', 'deg')
+        self.pitch_plot.setLabel('bottom', 'Time', 's')
+        self.pitch_plot.showGrid(x=True, y=True, alpha=0.3)
+        self.pitch_plot.addLegend()
+        layout.addWidget(self.pitch_plot)
+
+        # 曲线
+        self.depth_curves = []
+        self.pitch_curves = []
+        for g in self.gliders:
+            pen = pg.mkPen(color=g.color, width=2)
+            self.depth_curves.append(
+                self.depth_plot.plot(pen=pen, name='{} ({})'.format(g.name, g.ns)))
+            self.pitch_curves.append(
+                self.pitch_plot.plot(pen=pen, name='{} ({})'.format(g.name, g.ns)))
+
+        # 定时刷新
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._update)
+        self.timer.start(SAMPLE_MS)
+
+    def _update(self):
+        t = rospy.Time.now().to_sec() - self.t0
+
+        for g in self.gliders:
+            g.sample(t)
+
+        for i, g in enumerate(self.gliders):
+            if len(g.time) > 1:
+                times = list(g.time)
+                self.depth_curves[i].setData(times, list(g.depth))
+                self.pitch_curves[i].setData(times, list(g.pitch))
+
+        # 状态栏
+        parts = []
+        mission_names = {0: 'IDLE', 1: 'DIVING', 2: 'CLIMBING', 3: 'ARRIVED'}
+        for g in self.gliders:
+            if g.latest is not None:
+                s = g.latest
+                ms = ''
+                if g.mission is not None:
+                    ms = mission_names.get(g.mission.state, '?')
+                    if g.mission.distance > 0:
+                        ms += ' d={:.0f}m'.format(g.mission.distance)
+                parts.append(
+                    '<b>{}</b>: D={:.1f}m P={:.1f}\u00b0 Y={:.1f}\u00b0 {}'.format(
+                        g.name, s.depth,
+                        math.degrees(s.pitch),
+                        math.degrees(s.yaw),
+                        ms))
+        self.status_label.setText('  |  '.join(parts))
+
+
+def main():
+    rospy.init_node('swarm_dashboard', anonymous=True)
+
+    ns_str = rospy.get_param('~namespaces', 'ug_glider_0,ug_glider_1')
+    namespaces = [s.strip() for s in ns_str.split(',')]
+
+    app = QApplication(sys.argv)
+    win = SwarmDashboard(namespaces)
+    win.show()
+
+    ros_timer = QTimer()
+    ros_timer.timeout.connect(lambda: None)
+    ros_timer.start(50)
+
+    rospy.on_shutdown(app.quit)
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()

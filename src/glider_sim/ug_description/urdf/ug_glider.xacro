@@ -8,6 +8,7 @@
   <!-- 参数定义 -->
   <xacro:arg name="debug" default="0"/>
   <xacro:arg name="namespace" default="ug_glider"/>
+  <xacro:arg name="hull_color" default="Yellow"/>
 
   <!-- 引入 UUV Simulator 公共宏 -->
   <xacro:include filename="$(find uuv_descriptions)/urdf/common.urdf.xacro"/>
@@ -18,7 +19,7 @@
 
   <!-- 实例化滑翔机各组件 -->
   <xacro:ug_glider_base namespace="$(arg namespace)"/>
-  <xacro:ug_glider_gazebo namespace="$(arg namespace)" debug="$(arg debug)"/>
+  <xacro:ug_glider_gazebo namespace="$(arg namespace)" debug="$(arg debug)" hull_color="$(arg hull_color)"/>
   <xacro:ug_glider_actuators namespace="$(arg namespace)"/>
 
 </robot>

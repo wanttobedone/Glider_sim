@@ -41,7 +41,8 @@ public:
     vizPub_ = nhNs.advertise<visualization_msgs::MarkerArray>("viz/target_markers", 1);
 
     // 订阅
-    navGoalSub_ = nh_.subscribe("/move_base_simple/goal", 1,
+    // 多机模式下订阅带 namespace 的话题，避免多机冲突
+    navGoalSub_ = nhNs.subscribe("move_base_simple/goal", 1,
                                  &TargetMarkerNode::onNavGoal, this);
     missionStateSub_ = nhNs.subscribe("mission/state", 1,
                                        &TargetMarkerNode::onMissionState, this);

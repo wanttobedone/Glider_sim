@@ -43,7 +43,12 @@ add_executable(mission_node src/mission_node.cpp)
 target_link_libraries(mission_node ${catkin_LIBRARIES})
 add_dependencies(mission_node ${${PROJECT_NAME}_gencfg} ${catkin_EXPORTED_TARGETS})
 
-install(TARGETS state_converter_node control_node mission_node
+# 编队覆盖规划节点
+add_executable(swarm_planner_node src/swarm_planner_node.cpp)
+target_link_libraries(swarm_planner_node ${catkin_LIBRARIES})
+add_dependencies(swarm_planner_node ${catkin_EXPORTED_TARGETS})
+
+install(TARGETS state_converter_node control_node mission_node swarm_planner_node
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

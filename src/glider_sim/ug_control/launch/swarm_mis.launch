@@ -1,0 +1,30 @@
+<!--
+  编队覆盖任务层（规划器 + 可视化）
+  独立于世界和滑翔机生成，可在 swarm_coverage.launch 启动后单独触发
+  用法：roslaunch ug_control swarm_mis.launch
+-->
+<launch>
+  <!-- swarm覆盖任务规划器 -->
+  <node name="swarm_planner" pkg="ug_control" type="swarm_planner_node" output="screen">
+    <rosparam>
+      glider_namespaces: ["ug_glider_0", "ug_glider_1"]
+      area_center_north: 200.0
+      area_center_east: 0.0
+      area_length: 400.0
+      area_width: 200.0
+      swath_width: 50.0
+    </rosparam>
+  </node>
+
+  <!-- 编队可视化 -->
+  <node name="swarm_viz" pkg="ug_viz" type="swarm_viz_node" output="screen">
+    <rosparam>
+      glider_namespaces: ["ug_glider_0", "ug_glider_1"]
+      area_center_north: 200.0
+      area_center_east: 0.0
+      area_length: 400.0
+      area_width: 200.0
+      swath_width: 50.0
+    </rosparam>
+  </node>
+</launch>
