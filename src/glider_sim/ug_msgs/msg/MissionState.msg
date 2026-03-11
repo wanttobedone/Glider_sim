@@ -4,7 +4,9 @@ Header header
 uint8 IDLE     = 0
 uint8 DIVING   = 1
 uint8 CLIMBING = 2
-uint8 ARRIVED  = 3
+uint8 ARRIVED   = 3
+uint8 LOITERING = 4
+uint8 SURFACING = 5
 
 uint8   state
 float64 target_north        # 目标位置 NED [m]

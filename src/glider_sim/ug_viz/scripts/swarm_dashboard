@@ -5,20 +5,20 @@
   上图：深度对比（Y 轴倒置，浅在上深在下）
   下图：俯仰角对比
   颜色：G0 荧光绿，G1 荧光蓝
-
-用法：rosrun ug_viz swarm_dashboard
-  或：rosrun ug_viz swarm_dashboard _namespaces:="ug_glider_0,ug_glider_1"
+rosrun ug_viz swarm_dashboard 或 rosrun ug_viz swarm_dashboard _namespaces:="ug_glider_0,ug_glider_1"
 """
 
 import sys
 import math
 import collections
 import rospy
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel
-from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                             QHBoxLayout, QLabel, QTextEdit, QSplitter)
+from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtGui import QFont, QColor, QTextCursor
 import pyqtgraph as pg
 
-from ug_msgs.msg import GliderState, MissionState
+from ug_msgs.msg import GliderState, MissionState, SwarmComm
 
 # 滚动窗口长度（秒）
 WINDOW_SEC = 300
@@ -32,6 +32,19 @@ COLORS = [
     (50, 150, 255),   # 荧光蓝
 ]
 NAMES = ['G0', 'G1']
+
+OPCODE_NAMES = {
+    0: 'HEARTBEAT',
+    1: 'TARGET_FOUND',
+    3: 'REQ_SURFACE',
+    4: 'ACK',
+    5: 'MISSION_COMPLETE',
+}
+
+MISSION_NAMES = {
+    0: 'IDLE', 1: 'DIVING', 2: 'CLIMBING', 3: 'ARRIVED',
+    4: 'LOITERING', 5: 'SURFACING',
+}
 
 
 class GliderData:
@@ -71,7 +84,7 @@ class SwarmDashboard(QMainWindow):
     def __init__(self, namespaces):
         super().__init__()
         self.setWindowTitle('Swarm Dashboard')
-        self.resize(900, 600)
+        self.resize(1200, 800)
 
         self.gliders = []
         for i, ns in enumerate(namespaces):
@@ -87,26 +100,34 @@ class SwarmDashboard(QMainWindow):
 
         # 状态栏
         self.status_label = QLabel('')
-        self.status_label.setStyleSheet('font-size: 13px; padding: 4px;')
+        self.status_label.setStyleSheet('font-size: 26px; padding: 8px;')
         layout.addWidget(self.status_label)
 
         pg.setConfigOptions(antialias=True)
 
         # 深度图
-        self.depth_plot = pg.PlotWidget(title='深度对比 Depth [m]')
-        self.depth_plot.setLabel('left', 'Depth', 'm')
-        self.depth_plot.setLabel('bottom', 'Time', 's')
+        self.depth_plot = pg.PlotWidget(title='深度对比 Depth')
+        self.depth_plot.setLabel('left', 'Depth (m)')
+        self.depth_plot.setLabel('bottom', 'Time (s)')
         self.depth_plot.invertY(True)
         self.depth_plot.showGrid(x=True, y=True, alpha=0.3)
         self.depth_plot.addLegend()
+        self.depth_plot.getAxis('left').enableAutoSIPrefix(False)
+        self.depth_plot.getAxis('bottom').enableAutoSIPrefix(False)
+        self.depth_plot.setYRange(0, 35)
         layout.addWidget(self.depth_plot)
 
         # 俯仰角图
-        self.pitch_plot = pg.PlotWidget(title='俯仰角对比 Pitch [deg]')
-        self.pitch_plot.setLabel('left', 'Pitch', 'deg')
-        self.pitch_plot.setLabel('bottom', 'Time', 's')
+        self.pitch_plot = pg.PlotWidget(title='俯仰角对比 Pitch')
+        self.pitch_plot.setLabel('left', 'Pitch (deg)')
+        self.pitch_plot.setLabel('bottom', 'Time (s)')
         self.pitch_plot.showGrid(x=True, y=True, alpha=0.3)
         self.pitch_plot.addLegend()
+        self.pitch_plot.getAxis('left').enableAutoSIPrefix(False)
+        self.pitch_plot.getAxis('bottom').enableAutoSIPrefix(False)
+        self.pitch_plot.setYRange(-50, 50)
+        # 零线
+        self.pitch_plot.addLine(y=0, pen=pg.mkPen('#888', width=1, style=Qt.DashLine))
         layout.addWidget(self.pitch_plot)
 
         # 曲线
@@ -119,12 +140,98 @@ class SwarmDashboard(QMainWindow):
             self.pitch_curves.append(
                 self.pitch_plot.plot(pen=pen, name='{} ({})'.format(g.name, g.ns)))
 
+        # ── 通信面板 ──
+
+        # 状态灯区
+        lamp_layout = QHBoxLayout()
+        self.lamps = {}
+        for g in self.gliders:
+            lbl = QLabel('  {} '.format(g.name))
+            lbl.setStyleSheet('font-weight: bold; font-size: 13px;')
+            lamp_layout.addWidget(lbl)
+
+            comm_lamp = QLabel(' COMM ')
+            comm_lamp.setAlignment(Qt.AlignCenter)
+            comm_lamp.setStyleSheet(self._lamp_style('#555'))
+            lamp_layout.addWidget(comm_lamp)
+
+            sat_lamp = QLabel(' SAT ')
+            sat_lamp.setAlignment(Qt.AlignCenter)
+            sat_lamp.setStyleSheet(self._lamp_style('#555'))
+            lamp_layout.addWidget(sat_lamp)
+
+            mission_lbl = QLabel('IDLE')
+            mission_lbl.setStyleSheet('font-size: 12px; padding: 2px 6px;')
+            lamp_layout.addWidget(mission_lbl)
+
+            lamp_layout.addSpacing(20)
+            self.lamps[g.ns] = {
+                'comm': comm_lamp, 'sat': sat_lamp, 'mission': mission_lbl
+            }
+
+        layout.addLayout(lamp_layout)
+
+        # 通信日志
+        self.log_view = QTextEdit()
+        self.log_view.setReadOnly(True)
+        self.log_view.setMinimumHeight(300)
+        self.log_view.setFont(QFont('Courier', 10))
+        self.log_view.setStyleSheet(
+            'background-color: #0a0a0a; color: #33ff33; border: 1px solid #333;')
+        layout.addWidget(self.log_view)
+
+        # 通信订阅
+        self.comm_sub = rospy.Subscriber(
+            '/swarm/acoustic_channel', SwarmComm, self._on_comm)
+        self.last_comm_time = {}  # ns -> rospy.Time
+        self.comm_log_queue = []  # 线程安全缓冲区
+
         # 定时刷新
         self.timer = QTimer()
         self.timer.timeout.connect(self._update)
         self.timer.start(SAMPLE_MS)
 
+    @staticmethod
+    def _lamp_style(color):
+        return ('background-color: {}; color: white; font-size: 11px; '
+                'font-weight: bold; padding: 2px 8px; '
+                'border-radius: 8px; min-width: 40px;').format(color)
+
+    def _on_comm(self, msg):
+        """水声通信回调 — 只缓存，不操作 Qt 控件（ROS 回调在子线程）"""
+        sender = 'G{}'.format(msg.sender_id)
+        opname = OPCODE_NAMES.get(msg.opcode, 'OP{}'.format(msg.opcode))
+        coord = '({:.1f}, {:.1f}, {:.1f})'.format(msg.x, msg.y, msg.z)
+
+        # 记录通信时间
+        for g in self.gliders:
+            gid = int(g.ns.split('_')[-1]) if '_' in g.ns else -1
+            if gid == msg.sender_id or gid == msg.receiver_id or msg.receiver_id == 255:
+                self.last_comm_time[g.ns] = rospy.Time.now()
+
+        if msg.opcode == 1:  # TARGET_FOUND
+            line = '<span style="color:#ff3333;font-weight:bold;">[{}] !!! {} {} !!!</span>'.format(
+                sender, opname, coord)
+        elif msg.opcode == 3:  # REQ_SURFACE
+            line = '<span style="color:#ffcc00;">[{}] {} -> G{} {}</span>'.format(
+                sender, opname, msg.receiver_id, coord)
+        elif msg.opcode == 5:  # MISSION_COMPLETE
+            line = '<span style="color:#00ffcc;font-weight:bold;">[{}] {} {}</span>'.format(
+                sender, opname, coord)
+        else:
+            line = '<span style="color:#33ff33;">[{}] {} -> {}</span>'.format(
+                sender, opname, coord)
+
+        self.comm_log_queue.append(line)
+
     def _update(self):
+        # 主线程刷新通信日志
+        if self.comm_log_queue:
+            for line in self.comm_log_queue:
+                self.log_view.append(line)
+            self.comm_log_queue.clear()
+            self.log_view.moveCursor(QTextCursor.End)
+
         t = rospy.Time.now().to_sec() - self.t0
 
         for g in self.gliders:
@@ -136,23 +243,46 @@ class SwarmDashboard(QMainWindow):
                 self.depth_curves[i].setData(times, list(g.depth))
                 self.pitch_curves[i].setData(times, list(g.pitch))
 
-        # 状态栏
+        # 状态栏 + 灯
         parts = []
-        mission_names = {0: 'IDLE', 1: 'DIVING', 2: 'CLIMBING', 3: 'ARRIVED'}
+        now = rospy.Time.now()
         for g in self.gliders:
             if g.latest is not None:
                 s = g.latest
-                ms = ''
+                ms_name = ''
+                ms_state = 0
                 if g.mission is not None:
-                    ms = mission_names.get(g.mission.state, '?')
+                    ms_state = g.mission.state
+                    ms_name = MISSION_NAMES.get(ms_state, '?')
                     if g.mission.distance > 0:
-                        ms += ' d={:.0f}m'.format(g.mission.distance)
+                        ms_name += ' d={:.0f}m'.format(g.mission.distance)
                 parts.append(
                     '<b>{}</b>: D={:.1f}m P={:.1f}\u00b0 Y={:.1f}\u00b0 {}'.format(
                         g.name, s.depth,
                         math.degrees(s.pitch),
                         math.degrees(s.yaw),
-                        ms))
+                        ms_name))
+
+                # 更新灯
+                if g.ns in self.lamps:
+                    lp = self.lamps[g.ns]
+
+                    # 通信灯
+                    last = self.last_comm_time.get(g.ns)
+                    if last and (now - last).to_sec() < 15.0:
+                        lp['comm'].setStyleSheet(self._lamp_style('#00cc44'))
+                    else:
+                        lp['comm'].setStyleSheet(self._lamp_style('#555'))
+
+                    # 卫星灯
+                    if ms_state == 5 and s.depth < 0.5:
+                        lp['sat'].setStyleSheet(self._lamp_style('#00cc44'))
+                    else:
+                        lp['sat'].setStyleSheet(self._lamp_style('#555'))
+
+                    # 任务状态
+                    lp['mission'].setText(MISSION_NAMES.get(ms_state, '?'))
+
         self.status_label.setText('  |  '.join(parts))
 
 

@@ -195,10 +195,6 @@
     <!-- 分层洋流插件 -->
     <!-- 根据滑翔机深度实时插值洋流，同时发布到 Gazebo transport用于物理计算和 ROS用于调试 -->
     <!-- 数据源：SDF <layer> 标签（简单模式）或 简单模式：ENU 分层表 (vx=东, vy=北, vz=上) -->
-        <layer depth="0"   vx="0.0"  vy="0.0" vz="0.0"/>
-        <layer depth="10"  vx="0.0" vy="0.0" vz="0.0"/>
-        <layer depth="20"  vx="0.0" vy="0.0" vz="0.0"/>
-        <layer depth="30"  vx="0.0"  vy="0.0" vz="0.0"/>
 <!--文件（真实海洋数据模式），CSV是DAVE开发用到的格式，要有个脚本把CFD数据转成CSV -->
     <gazebo>
       <plugin name="${namespace}_ocean_current" filename="libug_ocean_current_plugin.so">
@@ -206,9 +202,9 @@
         <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
 
         <!-- 简单模式：ENU 分层表 (vx=东, vy=北, vz=上) -->
-        <layer depth="0"   vx="0.1"  vy="0.0" vz="0.0"/>
-        <layer depth="10"  vx="0.08" vy="0.0" vz="0.0"/>
-        <layer depth="20"  vx="0.03" vy="0.0" vz="0.0"/>
+        <layer depth="0"   vx="0.0"  vy="0.0" vz="0.0"/>
+        <layer depth="10"  vx="0.0" vy="0.0" vz="0.0"/>
+        <layer depth="20"  vx="0.0" vy="0.0" vz="0.0"/>
         <layer depth="30"  vx="0.0"  vy="0.0" vz="0.0"/>
 
         <!-- 真实模式，与上方二选一，前提是拿到网站原始CFD数据然后转了CSV，启用CSV，格式兼容DAVE-->

@@ -11,6 +11,7 @@ add_message_files(FILES
   ActuatorState.msg
   GliderState.msg
   MissionState.msg
+  SwarmComm.msg
 )
 
 generate_messages(DEPENDENCIES

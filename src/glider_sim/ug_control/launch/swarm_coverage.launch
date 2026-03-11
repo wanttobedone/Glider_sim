@@ -37,7 +37,7 @@
   </include>
 
   <!-- 编队任务层（规划器 + 可视化），也可单独 roslaunch ug_control swarm_mis.launch -->
-  <include file="$(find ug_control)/launch/swarm_mis.launch"/>
+  <!-- <include file="$(find ug_control)/launch/swarm_mis.launch"/> -->
 
   <!-- RViz（使用编队专用配置） -->
   <node if="$(arg rviz)" name="rviz" pkg="rviz" type="rviz"

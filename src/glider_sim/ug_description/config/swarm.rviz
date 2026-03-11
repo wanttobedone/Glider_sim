@@ -8,8 +8,10 @@ Panels:
         - /Glider 0 Model1
         - /Glider 1 Model1
         - /Swarm Trajectories1
+        - /Anomaly Target1
+        - /Anomaly Target1/Namespaces1
       Splitter Ratio: 0.5
-    Tree Height: 1109
+    Tree Height: 1829
   - Class: rviz/Views
     Expanded:
       - /Current View1
@@ -40,8 +42,6 @@ Visualization Manager:
       Plane Cell Count: 20
       Reference Frame: <Fixed Frame>
       Value: true
-
-    # ── Glider 0（黄色）──
     - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
@@ -52,6 +52,34 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        ug_glider_0/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider_0/battery_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider_0/battery_slide_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        ug_glider_0/bladder_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider_0/rudder_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider_0/wing_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Name: Glider 0 Model
       Robot Description: /ug_glider_0/robot_description
       TF Prefix: ""
@@ -63,7 +91,11 @@ Visualization Manager:
       Marker Topic: /ug_glider_0/viz/markers
       Name: G0 Markers
       Namespaces:
-        {}
+        attitude: true
+        target_depth: true
+        target_heading: true
+        velocity: true
+        water_surface: true
       Queue Size: 1
       Value: true
     - Class: rviz/Marker
@@ -71,19 +103,17 @@ Visualization Manager:
       Marker Topic: /ug_glider_0/viz/status_text
       Name: G0 Status Text
       Namespaces:
-        {}
+        status_text: true
       Queue Size: 1
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /ug_glider_0/ocean_current_markers
       Name: G0 Ocean Current
       Namespaces:
         {}
       Queue Size: 1
-      Value: true
-
-    # ── Glider 1（红色）──
+      Value: false
     - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
@@ -94,6 +124,34 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        ug_glider_1/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider_1/battery_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider_1/battery_slide_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        ug_glider_1/bladder_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider_1/rudder_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        ug_glider_1/wing_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Name: Glider 1 Model
       Robot Description: /ug_glider_1/robot_description
       TF Prefix: ""
@@ -105,7 +163,11 @@ Visualization Manager:
       Marker Topic: /ug_glider_1/viz/markers
       Name: G1 Markers
       Namespaces:
-        {}
+        attitude: true
+        target_depth: true
+        target_heading: true
+        velocity: true
+        water_surface: true
       Queue Size: 1
       Value: true
     - Class: rviz/Marker
@@ -113,19 +175,17 @@ Visualization Manager:
       Marker Topic: /ug_glider_1/viz/status_text
       Name: G1 Status Text
       Namespaces:
-        {}
+        status_text: true
       Queue Size: 1
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /ug_glider_1/ocean_current_markers
       Name: G1 Ocean Current
       Namespaces:
         {}
       Queue Size: 1
-      Value: true
-
-    # ── TF ──
+      Value: false
     - Class: rviz/TF
       Enabled: false
       Filter (blacklist): ""
@@ -143,14 +203,13 @@ Visualization Manager:
         {}
       Update Interval: 0
       Value: false
-
-    # ── Swarm 可视化 ──
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /swarm/trajectories
       Name: Swarm Trajectories
       Namespaces:
-        {}
+        trajectory_ug_glider_0: true
+        trajectory_ug_glider_1: true
       Queue Size: 1
       Value: true
     - Class: rviz/MarkerArray
@@ -158,23 +217,42 @@ Visualization Manager:
       Marker Topic: /swarm/waypoints
       Name: Swarm Waypoints
       Namespaces:
-        {}
+        wp_line_ug_glider_0: true
+        wp_line_ug_glider_1: true
+        wp_ug_glider_0: true
+        wp_ug_glider_1: true
       Queue Size: 1
       Value: true
-    - Class: rviz/Map
-      Alpha: 0.5
-      Color Scheme: map
-      Draw Behind: true
+    - Class: rviz/Marker
+      Enabled: false
+      Marker Topic: /swarm/coverage_volume
+      Name: Coverage Volume
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /swarm/detection_spheres
+      Name: Detection Spheres
+      Namespaces:
+        {}
+      Queue Size: 1
+      Value: false
+    - Class: rviz/MarkerArray
       Enabled: true
-      Name: Coverage Grid
-      Topic: /swarm/coverage_grid
-      Unreliable: false
-      Use Timestamp: false
+      Marker Topic: /swarm/anomaly_markers
+      Name: Anomaly Target
+      Namespaces:
+        acoustic_wave: true
+        anomaly_detect_range: false
+        anomaly_target: true
+        comm_link: true
+      Queue Size: 1
       Value: true
-
   Enabled: true
   Global Options:
-    Background Color: 48; 48; 48
+    Background Color: 10; 20; 40
     Default Light: true
     Fixed Frame: world
     Frame Rate: 30
@@ -189,7 +267,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 150
+      Distance: 306.7193298339844
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -197,27 +275,27 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 100
-        Y: 0
-        Z: -15
+        X: -4.768648624420166
+        Y: 37.45654296875
+        Z: -8.823357582092285
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5
+      Pitch: 0.2549997866153717
       Target Frame: world
-      Yaw: 3.14
+      Yaw: 4.8600006103515625
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1369
+  Height: 2089
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd000000010000000000000161000004f1fc0200000002fb000000100044006900730070006c0061007900730100000047000004f1000000f100fffffffb0000000a0056006900650077007300000001eb00000114000000c200ffffff00000374000004f100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000010000000000000161000007c1fc0200000002fb000000100044006900730070006c0061007900730100000047000007c1000000f100fffffffb0000000a0056006900650077007300000001eb00000114000000c200ffffff00000861000007c100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
-  Width: 1244
+  Width: 2505
   X: 72
   Y: 34

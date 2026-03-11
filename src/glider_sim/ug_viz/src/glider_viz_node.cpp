@@ -1,22 +1,22 @@
 /**
- *  RViz 可视化节点
- *   广播 world -> {ns}/base_link TF (来自 ground truth Odometry)
- *   发布可视化 MarkerArray (姿态/速度/目标深度/水面/目标航向)
- *   发布状态文字 Marker
- *   发布实际轨迹 Path
+ * 单机 RViz 可视化节点
  *
- * 订阅话题，namespace现在为ug_glider:
- *   /{ns}/ground_truth/pose  (Odometry)
- *   /{ns}/glider_state        (GliderState)
- *   /{ns}/actuator_state      (ActuatorState)
- *   /{ns}/cmd/depth           (Float64)
- *   /{ns}/cmd/heading         (Float64)
+ * 广播 world → {ns}/base_link TF，发布姿态/速度/深度指示等 Marker，
+ * 发布状态文字叠加（含任务状态 IDLE~SURFACING），发布实际轨迹 Path。
  *
- * 发布话题:
- *   /{ns}/viz/markers         (MarkerArray)
- *   /{ns}/viz/status_text     (Marker)状态文字
- *   /{ns}/viz/actual_path     (Path)实际轨迹
- *   /{ns}/viz/target_path     (Path)目标轨迹，后续控制器实现轨迹跟踪
+ * 订阅：
+ *   /{ns}/ground_truth/pose   (Odometry)       Gazebo 真值位姿
+ *   /{ns}/glider_state        (GliderState)    NED 状态（深度/俯仰/航向/速度）
+ *   /{ns}/actuator_state      (ActuatorState)  执行机构状态（电池/油囊/舵角）
+ *   /{ns}/cmd/depth           (Float64)        深度指令
+ *   /{ns}/cmd/heading         (Float64)        航向指令
+ *   /{ns}/mission/state       (MissionState)   任务状态（0~5: IDLE/DIVING/CLIMBING/ARRIVED/LOITERING/SURFACING）
+ *
+ * 发布：
+ *   /{ns}/viz/markers         (MarkerArray)    姿态箭头 + 速度箭头 + 深度盘 + 水面 + 航向箭头
+ *   /{ns}/viz/status_text     (Marker)         状态文字叠加（TEXT_VIEW_FACING）
+ *   /{ns}/viz/actual_path     (Path)           实际轨迹
+ *   /{ns}/viz/target_path     (Path)           目标轨迹（预留）
  */
 
 #include <ros/ros.h>
@@ -275,8 +275,8 @@ private:
       sf.id = 3;
       sf.type = visualization_msgs::Marker::CUBE;
       sf.action = visualization_msgs::Marker::ADD;
-      sf.pose.position.x = pos.x;
-      sf.pose.position.y = pos.y;
+      sf.pose.position.x = 0.0;
+      sf.pose.position.y = 0.0;
       sf.pose.position.z = 0.0;
       sf.pose.orientation.w = 1.0;
       sf.scale.x = 200.0; sf.scale.y = 200.0; sf.scale.z = 0.01;
@@ -345,9 +345,9 @@ private:
 
       if (hasMissionState_)
       {
-        const char* stateNames[] = {"IDLE", "DIVING", "CLIMBING", "ARRIVED"};
+        const char* stateNames[] = {"IDLE", "DIVING", "CLIMBING", "ARRIVED", "LOITERING", "SURFACING"};
         uint8_t si = missionState_.state;
-        const char* sn = (si <= 3) ? stateNames[si] : "UNKNOWN";
+        const char* sn = (si <= 5) ? stateNames[si] : "UNKNOWN";
         oss << "\nMission: " << sn;
         if (si > 0)
           oss << "  dist: " << std::setprecision(1) << missionState_.distance << "m";
