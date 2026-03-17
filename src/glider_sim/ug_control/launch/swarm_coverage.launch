@@ -6,6 +6,11 @@
   <arg name="gui" default="true"/>
   <arg name="rviz" default="true"/>
   <arg name="paused" default="false"/>
+  <arg name="target_north" default="100.0"/><!--记得与rviz中的同步-->
+  <arg name="target_east" default="-5.0"/>
+  <arg name="target_z" default="-25.0"/>
+
+  <env name="GAZEBO_MODEL_PATH" value="$(find ug_description)/models:$(find dave_object_models)/models:$(optenv GAZEBO_MODEL_PATH)"/>
 
   <!-- 启动 Gazebo 世界，只启动一次 -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
@@ -18,6 +23,14 @@
   <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
   <!--由Gazebo的ENU改为NED-->
 
+  <!-- 演示目标物，坐标与 swarm_mis 默认 anomaly 参数一致 -->
+  <include file="$(find ug_description)/launch/spawn_demo_target.launch">
+    <arg name="model_name" value="swarm_demo_target"/>
+    <arg name="north" value="$(arg target_north)"/>
+    <arg name="east" value="$(arg target_east)"/>
+    <arg name="z" value="$(arg target_z)"/>
+  </include>
+
   <!--  生成 Glider 0（黄色） -->
   <include file="$(find ug_description)/launch/spawn_glider.launch">
     <arg name="namespace" value="ug_glider_0"/>
@@ -25,6 +38,7 @@
     <arg name="y" value="0"/>
     <arg name="z" value="-0.116"/>
     <arg name="hull_color" value="Yellow"/>
+    <arg name="hull_rgba" value="1.0 0.9 0.0 1.0"/>
   </include>
 
   <!-- 生成 Glider 1（红色） -->
@@ -34,12 +48,13 @@
     <arg name="y" value="25"/>
     <arg name="z" value="-0.116"/>
     <arg name="hull_color" value="Red"/>
+    <arg name="hull_rgba" value="1.0 0.0 0.0 1.0"/>
   </include>
 
-  <!-- 编队任务层（规划器 + 可视化），也可单独 roslaunch ug_control swarm_mis.launch -->
+  <!-- 编队任务层（规划器,可视化），也可单独 roslaunch ug_control swarm_mis.launch -->
   <!-- <include file="$(find ug_control)/launch/swarm_mis.launch"/> -->
 
-  <!-- RViz（使用编队专用配置） -->
+  <!-- RViz,使用编队专用配置 -->
   <node if="$(arg rviz)" name="rviz" pkg="rviz" type="rviz"
         args="-d $(find ug_description)/config/swarm.rviz"/>
 </launch>

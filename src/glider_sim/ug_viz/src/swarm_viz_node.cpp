@@ -35,6 +35,7 @@
  *   /swarm/coverage_volume     (Marker)             3D 体素覆盖（CUBE_LIST）
  *   /swarm/detection_spheres   (MarkerArray)        探测范围球
  *   /swarm/coverage_percent    (Float64)            覆盖率百分比
+ *   /swarm/planned_area        (Marker)             规划扫海区域二维边框
  *   /swarm/anomaly_markers     (MarkerArray)        异常目标 + 声波环 + 通信虚线 + 卫星链路
  */
 
@@ -224,6 +225,7 @@ public:
     coveragePub_ = nh_.advertise<visualization_msgs::Marker>("/swarm/coverage_volume", 1, true);
     spherePub_ = nh_.advertise<visualization_msgs::MarkerArray>("/swarm/detection_spheres", 1);
     percentPub_ = nh_.advertise<std_msgs::Float64>("/swarm/coverage_percent", 1, true);
+    plannedAreaPub_ = nh_.advertise<visualization_msgs::Marker>("/swarm/planned_area", 1, true);
     anomalyPub_ = nh_.advertise<visualization_msgs::MarkerArray>("/swarm/anomaly_markers", 1, true);
 
     // 2Hz 可视化
@@ -441,7 +443,43 @@ private:
     }
 
     // 5. 异常目标标记 + 声波扩散环
+    publishPlannedArea(now);
     publishAnomalyMarkers(now);
+  }
+
+  void publishPlannedArea(const ros::Time &now)
+  {
+    visualization_msgs::Marker area;
+    area.header.frame_id = "world";
+    area.header.stamp = now;
+    area.ns = "planned_area";
+    area.id = 0;
+    area.type = visualization_msgs::Marker::LINE_STRIP;
+    area.action = visualization_msgs::Marker::ADD;
+    area.pose.orientation.w = 1.0;
+    area.scale.x = 0.8;
+    area.color.r = 1.0;
+    area.color.g = 0.1;
+    area.color.b = 0.1;
+    area.color.a = 0.95;
+    area.lifetime = ros::Duration(1.0);
+
+    const double northMin = areaCenterNorth_ - areaLength_ / 2.0;
+    const double northMax = areaCenterNorth_ + areaLength_ / 2.0;
+    const double eastMin = areaCenterEast_ - areaWidth_ / 2.0;
+    const double eastMax = areaCenterEast_ + areaWidth_ / 2.0;
+    const double z = 0.1;
+
+    geometry_msgs::Point p;
+    p.z = z;
+
+    p.x = northMin; p.y = eastMin; area.points.push_back(p);
+    p.x = northMax; p.y = eastMin; area.points.push_back(p);
+    p.x = northMax; p.y = eastMax; area.points.push_back(p);
+    p.x = northMin; p.y = eastMax; area.points.push_back(p);
+    p.x = northMin; p.y = eastMin; area.points.push_back(p);
+
+    plannedAreaPub_.publish(area);
   }
 
   void publishCoverageVolume(const ros::Time &now)
@@ -756,6 +794,7 @@ private:
   ros::Publisher coveragePub_;
   ros::Publisher spherePub_;
   ros::Publisher percentPub_;
+  ros::Publisher plannedAreaPub_;
   ros::Publisher anomalyPub_;
 
   int vizCounter_ = 0;

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="model_name" default="demo_target"/>
+  <arg name="north" default="100.0"/>
+  <arg name="east" default="-5.0"/>
+  <arg name="z" default="-25.0"/>
+  <arg name="yaw" default="0.0"/>
+
+  <node name="$(arg model_name)_spawner" pkg="gazebo_ros" type="spawn_model"
+        respawn="false" output="screen"
+        args="-sdf
+              -file $(find ug_description)/models/checkerboard_target/model.sdf
+              -model $(arg model_name)
+              -x $(arg north)
+              -y $(arg east)
+              -z $(arg z)
+              -Y $(arg yaw)"/>
+</launch>

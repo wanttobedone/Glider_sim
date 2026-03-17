@@ -224,6 +224,14 @@ Visualization Manager:
       Queue Size: 1
       Value: true
     - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /swarm/planned_area
+      Name: Planned Area
+      Namespaces:
+        planned_area: true
+      Queue Size: 1
+      Value: true
+    - Class: rviz/Marker
       Enabled: false
       Marker Topic: /swarm/coverage_volume
       Name: Coverage Volume

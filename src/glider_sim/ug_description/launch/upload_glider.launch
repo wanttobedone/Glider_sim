@@ -12,6 +12,7 @@
   <arg name="yaw" default="0"/>
   <arg name="debug" default="0"/>
   <arg name="hull_color" default="Yellow"/>
+  <arg name="hull_rgba" default="1.0 0.9 0.0 1.0"/>
   <arg name="use_sim_time" default="true"/>
 
   <!-- 使用仿真时间 -->
@@ -22,7 +23,8 @@
          command="$(find xacro)/xacro '$(find ug_description)/urdf/ug_glider.xacro'
                   namespace:=$(arg namespace)
                   debug:=$(arg debug)
-                  hull_color:=$(arg hull_color)"/>
+                  hull_color:=$(arg hull_color)
+                  hull_rgba:='$(arg hull_rgba)'"/>
 
   <!-- 在 Gazebo 中生成模型 -->
   <node name="$(arg namespace)_urdf_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"

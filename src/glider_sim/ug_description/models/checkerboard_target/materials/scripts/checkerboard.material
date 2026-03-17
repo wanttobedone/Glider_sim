@@ -1,0 +1,21 @@
+material Checkerboard/Pattern
+{
+    technique
+    {
+        pass
+        {
+            ambient 1.0 1.0 1.0 1.0
+            diffuse 1.0 1.0 1.0 1.0
+            specular 0.1 0.1 0.1 1.0 12.5
+            emissive 0.0 0.0 0.0 0.0
+
+            texture_unit
+            {
+                texture checkerboard_15cm.png
+                filtering trilinear
+                tex_address_mode wrap
+                colour_op modulate
+            }
+        }
+    }
+}

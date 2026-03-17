@@ -12,6 +12,7 @@
   <arg name="yaw" default="0"/>
   <arg name="debug" default="0"/>
   <arg name="hull_color" default="Yellow"/>
+  <arg name="hull_rgba" default="1.0 0.9 0.0 1.0"/>
   <arg name="control" default="true"/>
   <arg name="mission" default="true"/>
 
@@ -26,6 +27,7 @@
     <arg name="yaw" value="$(arg yaw)"/>
     <arg name="debug" value="$(arg debug)"/>
     <arg name="hull_color" value="$(arg hull_color)"/>
+    <arg name="hull_rgba" value="$(arg hull_rgba)"/>
   </include>
 
   <!-- 硬件参数 -->

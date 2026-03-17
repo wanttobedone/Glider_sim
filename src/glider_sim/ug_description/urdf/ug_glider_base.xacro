@@ -49,7 +49,7 @@
   <xacro:property name="rudder_mesh" value="package://ug_description/meshes/UG_steer.stl"/>
 
   <!-- 宏定义 -->
-  <xacro:macro name="ug_glider_base" params="namespace">
+  <xacro:macro name="ug_glider_base" params="namespace hull_rgba:='1.0 0.9 0.0 1.0'">
 
     <!-- 机体 (base_link)-->
     <link name="${namespace}/base_link">
@@ -58,8 +58,8 @@
         <geometry>
           <mesh filename="${hull_mesh}" scale="1 1 1"/>
         </geometry>
-        <material name="glider_yellow">
-          <color rgba="1.0 0.9 0.0 1.0"/>
+        <material name="${namespace}_hull_material">
+          <color rgba="${hull_rgba}"/>
         </material>
       </visual>
 

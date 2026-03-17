@@ -17,6 +17,8 @@
   <!-- 可选世界文件 -->
   <arg name="world_name" default="$(find dave_worlds)/worlds/dave_ocean_waves.world"/>
 
+  <env name="GAZEBO_MODEL_PATH" value="$(find ug_description)/models:$(find dave_object_models)/models:$(optenv GAZEBO_MODEL_PATH)"/>
+
   <!-- 启动 Gazebo (带 dave 海底世界) -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="world_name" value="$(arg world_name)"/>

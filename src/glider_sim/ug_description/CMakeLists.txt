@@ -11,7 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package()
 
-# Install meshes, urdf, launch, config
-install(DIRECTORY meshes urdf launch config
+# Install meshes, models, urdf, launch, config
+install(DIRECTORY meshes models urdf launch config
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
