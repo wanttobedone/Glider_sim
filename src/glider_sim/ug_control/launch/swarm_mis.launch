@@ -6,7 +6,7 @@
 <launch>
   <!-- 共享参数，一处定义，planner 和 viz 都从 /swarm/ 读取 -->
   <rosparam ns="swarm">
-    glider_namespaces: ["ug_glider_0", "ug_glider_1"]
+    glider_namespaces: ["ug_glider_0", "ug_glider_1", "ug_glider_2"]
     area_center_north: 200.0
     area_center_east: 12.5
     area_length: 400.0
@@ -34,6 +34,15 @@
   <node name="ug_glider_1_comm" pkg="ug_comm" type="comm_agent_node" output="screen">
     <param name="namespace" value="ug_glider_1"/>
   </node>
+  <node name="ug_glider_2_comm" pkg="ug_comm" type="comm_agent_node" output="screen">
+    <param name="namespace" value="ug_glider_2"/>
+  </node>
+
+  <!-- G2 中继站：control_node 切手动模式，pitch PID 跟踪 17.25° -->
+  <node name="ug_glider_2_mode" pkg="rostopic" type="rostopic"
+        args="pub -r 1 /ug_glider_2/cmd/mode std_msgs/Int32 'data: 0'" output="log"/>
+  <node name="ug_glider_2_pitch" pkg="rostopic" type="rostopic"
+        args="pub -r 1 /ug_glider_2/cmd/pitch std_msgs/Float64 'data: 0.301'" output="log"/>
 
   <!-- 编队可视化 -->
   <node name="swarm_viz" pkg="ug_viz" type="swarm_viz_node" output="screen"/>

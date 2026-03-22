@@ -30,8 +30,9 @@ MAX_POINTS = int(WINDOW_SEC / (SAMPLE_MS / 1000.0))
 COLORS = [
     (50, 255, 50),    # 荧光绿
     (50, 150, 255),   # 荧光蓝
+    (30, 80, 220),    # 靛蓝（G2 中继站）
 ]
-NAMES = ['G0', 'G1']
+NAMES = ['G0', 'G1', 'G2']
 
 OPCODE_NAMES = {
     0: 'HEARTBEAT',

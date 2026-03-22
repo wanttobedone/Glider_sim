@@ -59,9 +59,9 @@ struct GliderColors
 };
 
 static const GliderColors COLORS[] = {
-    {0.2f, 1.0f, 0.2f},   // 荧光绿
-    {0.2f, 0.6f, 1.0f},   // 荧光蓝
-    {1.0f, 0.6f, 0.2f},   // 荧光橙
+    {0.2f, 1.0f, 0.2f},   // G0 荧光绿
+    {0.2f, 0.6f, 1.0f},   // G1 荧光蓝
+    {0.12f, 0.31f, 0.86f}, // G2 靛蓝（中继站）
     {0.8f, 0.2f, 1.0f}};  // 荧光紫
 
 struct Waypoint

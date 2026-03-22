@@ -51,6 +51,16 @@
     <arg name="hull_rgba" value="1.0 0.0 0.0 1.0"/>
   </include>
 
+  <!-- 生成 Glider 2（蓝色，固定中继站，手动模式只控 pitch） -->
+  <include file="$(find ug_description)/launch/spawn_glider.launch">
+    <arg name="namespace" value="ug_glider_2"/>
+    <arg name="x" value="-10"/>
+    <arg name="y" value="10"/>
+    <arg name="z" value="-0.116"/>
+    <arg name="hull_color" value="Blue"/>
+    <arg name="hull_rgba" value="0.1 0.3 1.0 1.0"/>
+  </include>
+
   <!-- 编队任务层（规划器,可视化），也可单独 roslaunch ug_control swarm_mis.launch -->
   <!-- <include file="$(find ug_control)/launch/swarm_mis.launch"/> -->
 
