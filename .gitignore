@@ -45,3 +45,4 @@ src/glider_sim/ug_gazebo_plugins/scripts
 src/glider_sim/ug_description/launch/test_liftdrag.launch
 src/glider_sim/ug_description/urdf/ug_glider_gazebo_test.xacro
 src/glider_sim/ug_description/urdf/ug_glider_test_fixed.xacro
+src/glider_sim/ug_description/scripts/
