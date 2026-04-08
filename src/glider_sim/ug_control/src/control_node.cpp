@@ -238,12 +238,12 @@ private:
       // 级联控制器
       // 外环深度误差驱动目标俯仰角
       double depthError = targetDepth_ - currentState_.depth;
-      double desiredPitch = depthOuterPID_.compute(depthError, dt);
+      double desiredPitch = -depthOuterPID_.compute(depthError, dt);
       desiredPitch = std::max(-maxPitchCmd_, std::min(maxPitchCmd_, desiredPitch));
 
       // 内环俯仰误差驱动电池位置
       double pitchError = desiredPitch - currentState_.pitch;
-      cmd.battery_position = pitchPID_.compute(pitchError, dt);
+      cmd.battery_position = -pitchPID_.compute(pitchError, dt);
 
       // 油囊前馈，设置0.001的深度为滤波阈值，深度正误差下潜，减小油量
       double ffInput = 0.0;
@@ -266,7 +266,7 @@ private:
       else
       {
         double pitchError = targetPitch_ - currentState_.pitch;
-        cmd.battery_position = pitchPID_.compute(pitchError, dt);
+        cmd.battery_position = -pitchPID_.compute(pitchError, dt);
       }
 
       // Depth改油囊体积，可被 cmd/ballast_direct 覆盖

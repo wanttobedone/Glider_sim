@@ -207,8 +207,8 @@ private:
     geometry_msgs::PoseStamped msg;
     msg.header.stamp = ros::Time::now();
     msg.header.frame_id = "world";
-    msg.pose.position.x = wp.north;
-    msg.pose.position.y = wp.east;
+    msg.pose.position.x = wp.east;   // ENU X = East
+    msg.pose.position.y = wp.north;  // ENU Y = North
     msg.pose.position.z = 0.0;
     msg.pose.orientation.w = 1.0;
     g.targetPub.publish(msg);

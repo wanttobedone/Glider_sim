@@ -18,7 +18,7 @@
  *
  * 订阅话题
  *   /{ns}/glider_state          (GliderState)   当前 NED 状态
- *   /{ns}/mission/target        (PoseStamped)   目标航点 (x=north, y=east)
+ *   /{ns}/mission/target        (PoseStamped)   目标航点 (world/ENU: x=east, y=north)
  *   /{ns}/move_base_simple/goal (PoseStamped)   RViz 2D Nav Goal
  *   /{ns}/mission/mode          (UInt8)         comm_agent 模式指令，4=LOITERING, 5=SURFACING
  *
@@ -102,8 +102,8 @@ private:
     if (missionState_ == LOITERING || missionState_ == SURFACING)
       return;
 
-    targetNorth_ = msg->pose.position.x;
-    targetEast_ = msg->pose.position.y;
+    targetNorth_ = msg->pose.position.y;  // ENU Y = North
+    targetEast_ = msg->pose.position.x;   // ENU X = East
     hasTarget_ = true;
     startMission();
   }
@@ -113,8 +113,8 @@ private:
     if (missionState_ == LOITERING || missionState_ == SURFACING)
       return;
 
-    targetNorth_ = msg->pose.position.x;
-    targetEast_ = msg->pose.position.y;
+    targetNorth_ = msg->pose.position.y;  // ENU Y = North
+    targetEast_ = msg->pose.position.x;   // ENU X = East
     hasTarget_ = true;
     startMission();
     ROS_INFO("[Mission] 2D Nav Goal: north=%.1f, east=%.1f",

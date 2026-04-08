@@ -162,7 +162,7 @@ private:
 
       publishTarget();
       ROS_INFO("[TargetMarker] 目标设定: north=%.1f, east=%.1f",
-               targetX_, targetY_);
+               targetY_, targetX_);  // Y=North, X=East in ENU
     }
   }
 
@@ -171,7 +171,7 @@ private:
   {
     publishTarget();
     ROS_INFO("[TargetMarker] 菜单发送目标: north=%.1f, east=%.1f",
-             targetX_, targetY_);
+             targetY_, targetX_);  // Y=North, X=East in ENU
   }
 
   void onNavGoal(const geometry_msgs::PoseStamped::ConstPtr &msg)
@@ -193,7 +193,7 @@ private:
 
     publishTarget();
     ROS_INFO("[TargetMarker] 2D Nav Goal: north=%.1f, east=%.1f",
-             targetX_, targetY_);
+             targetY_, targetX_);  // Y=North, X=East in ENU
   }
 
   void onMissionState(const ug_msgs::MissionState::ConstPtr &msg)
@@ -264,7 +264,7 @@ private:
       text.color.r = 1.0; text.color.g = 0.9; text.color.b = 0.2; text.color.a = 0.9;
 
       char buf[128];
-      snprintf(buf, sizeof(buf), "Target (%.0f, %.0f)", targetX_, targetY_);
+      snprintf(buf, sizeof(buf), "Target N:%.0f E:%.0f", targetY_, targetX_);
       text.text = buf;
 
       if (hasMissionState_ && missionState_.distance > 0)

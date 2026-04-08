@@ -346,8 +346,8 @@ private:
         sphere.id = markerId++;
         sphere.type = visualization_msgs::Marker::SPHERE;
         sphere.action = visualization_msgs::Marker::ADD;
-        sphere.pose.position.x = wps[j].north;
-        sphere.pose.position.y = wps[j].east;
+        sphere.pose.position.x = wps[j].east;   // ENU X = East
+        sphere.pose.position.y = wps[j].north;  // ENU Y = North
         sphere.pose.position.z = 0.0;
         sphere.pose.orientation.w = 1.0;
         sphere.scale.x = 0.5;
@@ -383,8 +383,8 @@ private:
         for (const auto &wp : wps)
         {
           geometry_msgs::Point p;
-          p.x = wp.north;
-          p.y = wp.east;
+          p.x = wp.east;   // ENU X = East
+          p.y = wp.north;  // ENU Y = North
           p.z = 0.0;
           line.points.push_back(p);
         }
@@ -473,11 +473,12 @@ private:
     geometry_msgs::Point p;
     p.z = z;
 
-    p.x = northMin; p.y = eastMin; area.points.push_back(p);
-    p.x = northMax; p.y = eastMin; area.points.push_back(p);
-    p.x = northMax; p.y = eastMax; area.points.push_back(p);
-    p.x = northMin; p.y = eastMax; area.points.push_back(p);
-    p.x = northMin; p.y = eastMin; area.points.push_back(p);
+    // NED → ENU world: x=east, y=north
+    p.x = eastMin; p.y = northMin; area.points.push_back(p);
+    p.x = eastMin; p.y = northMax; area.points.push_back(p);
+    p.x = eastMax; p.y = northMax; area.points.push_back(p);
+    p.x = eastMax; p.y = northMin; area.points.push_back(p);
+    p.x = eastMin; p.y = northMin; area.points.push_back(p);
 
     plannedAreaPub_.publish(area);
   }
@@ -578,8 +579,8 @@ private:
     cyl.id = 0;
     cyl.type = visualization_msgs::Marker::CYLINDER;
     cyl.action = visualization_msgs::Marker::ADD;
-    cyl.pose.position.x = anomalyNorth_;
-    cyl.pose.position.y = anomalyEast_;
+    cyl.pose.position.x = anomalyEast_;   // ENU X = East
+    cyl.pose.position.y = anomalyNorth_;  // ENU Y = North
     cyl.pose.position.z = -anomalyDepth_;  // NED→ENU
     cyl.pose.orientation.w = 1.0;
     cyl.scale.x = 4.0;

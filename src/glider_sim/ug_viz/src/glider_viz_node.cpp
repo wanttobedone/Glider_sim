@@ -287,8 +287,9 @@ private:
 
     // 目标航向箭头，黄色，从滑翔机位置指向目标航向方向
     {
-      double hx = std::cos(targetHeading_);
-      double hy = std::sin(targetHeading_);
+      // NED heading (0=North=Y, π/2=East=X) → ENU world 方向
+      double hx = std::sin(targetHeading_);  // East/X 分量
+      double hy = std::cos(targetHeading_);  // North/Y 分量
 
       visualization_msgs::Marker hd;
       hd.header.frame_id = "world";

@@ -1,18 +1,29 @@
 /**
- * 状态转换节点：Gazebo ground truth (ENU)到滑翔机状态 (NED)
+ * 状态转换节点：Gazebo ground truth (ENU) → 滑翔机状态 (NED)
  * 后续传感器节点加入后，完善状态估计节点，这个文件作为输入输出接口
- * 订阅 /ground_truth/pose (nav_msgs/Odometry, Gazebo P3D 输出)
+ * 订阅 /ground_truth/pose (nav_msgs/Odometry, Gazebo P3D 输出, ENU 世界帧)
  * 发布 /{ns}/glider_state (ug_msgs/GliderState, NED 坐标系)
  *
- * 坐标转换
- *   NED.north = ENU.x
- *   Gazebo 默认不是 ENU，而是 X=前, Y=左, Z=上。
- *   UUV simulator 在 NED 辅助节点中处理了这个，
- *   读 Gazebo 世界坐标并做映射：
- *     Gazebo world: X=North, Y=East (假设初始朝北), Z=Up
- *     NED: X=North, Y=East, Z=Down
- *   north=X, east=Y, depth=-Z
- *   roll/pitch 不变，yaw 不变（都是右手系到 NED 的映射）
+ * 坐标系说明
+ *   Gazebo world 帧 = ENU: X=East, Y=North, Z=Up
+ *   (由 uuv_assistants/publish_world_ned_frame.launch 的 world→world_ned 变换确认)
+ *
+ * 位置 ENU → NED:
+ *   north = y_enu,  east = x_enu,  depth = -z_enu
+ *
+ * 姿态 ENU → NED (完整旋转变换):
+ *   R_ned = R_w^n · R_b^w · T_b
+ *   其中:
+ *     R_b^w  = Gazebo 四元数对应旋转矩阵 (body → ENU world)
+ *     R_w^n  = [0,1,0; 1,0,0; 0,0,-1]  (ENU world → NED world)
+ *     T_b    = diag(1,-1,-1)            (ROS body X前Y左Z上 → NED body X前Y右Z下)
+ *   再从 R_ned 提取 ZYX 欧拉角 (roll, pitch, yaw)
+ *
+ * 线速度 ROS body → NED body:
+ *   surge = vx,  sway = -vy,  heave = -vz
+ *
+ * 角速度 ROS body → NED body:
+ *   roll_rate = ωx,  pitch_rate = -ωy,  yaw_rate = -ωz
  */
 
 #include <ros/ros.h>
@@ -46,36 +57,54 @@ public:
     state.header.stamp = msg->header.stamp;
     state.header.frame_id = "world_ned";
 
-    // 位置由Gazebo (X-North, Y-East, Z-Up)到NED (North, East, Down)
-    state.north = msg->pose.pose.position.x;
-    state.east = msg->pose.pose.position.y;
+    // 位置: ENU (X=East, Y=North, Z=Up) → NED (North, East, Down)
+    state.north = msg->pose.pose.position.y;
+    state.east  = msg->pose.pose.position.x;
     state.depth = -msg->pose.pose.position.z;
 
-    // 姿态由四元数变为欧拉角
+    // 姿态: 完整旋转变换 R_ned = R_w^n · R_b^w · T_b
     tf2::Quaternion q(
         msg->pose.pose.orientation.x,
         msg->pose.pose.orientation.y,
         msg->pose.pose.orientation.z,
         msg->pose.pose.orientation.w);
-    tf2::Matrix3x3 m(q);
+    tf2::Matrix3x3 R_bw(q);
+
+    // R_ned = R_w^n · R_b^w · T_b
+    // 其中 R_w^n = [0,1,0; 1,0,0; 0,0,-1], T_b = diag(1,-1,-1)
+    //
+    // 分两步展开:
+    // Step A: M = R_b^w · T_b (右乘 T_b = 第1、2列取反)
+    //   M[i][0] =  R_bw[i][0]
+    //   M[i][1] = -R_bw[i][1]
+    //   M[i][2] = -R_bw[i][2]
+    //
+    // Step B: R_ned = R_w^n · M (左乘 R_w^n = 行重排)
+    //   R_ned row0 = M row1
+    //   R_ned row1 = M row0
+    //   R_ned row2 = -M row2
+    tf2::Matrix3x3 R_ned;
+    R_ned.setValue(
+         R_bw[1][0], -R_bw[1][1], -R_bw[1][2],   // row0 = M row1
+         R_bw[0][0], -R_bw[0][1], -R_bw[0][2],   // row1 = M row0
+        -R_bw[2][0],  R_bw[2][1],  R_bw[2][2]);  // row2 = -M row2
 
     double roll, pitch, yaw;
-    m.getRPY(roll, pitch, yaw);
+    R_ned.getRPY(roll, pitch, yaw);
 
-    // Gazebo Z-up 到 NED Z-down：pitch 和 roll 符号不变，yaw 不变
-    state.roll = roll;
+    state.roll  = roll;
     state.pitch = pitch;
-    state.yaw = yaw;
+    state.yaw   = yaw;
 
-    // 速度（机体坐标系，直接传递）
-    state.surge = msg->twist.twist.linear.x;
-    state.sway = msg->twist.twist.linear.y;
-    state.heave = -msg->twist.twist.linear.z;  // Z 翻转
+    // 线速度: ROS body (X前Y左Z上) → NED body (X前Y右Z下)
+    state.surge =  msg->twist.twist.linear.x;
+    state.sway  = -msg->twist.twist.linear.y;
+    state.heave = -msg->twist.twist.linear.z;
 
-    // 角速度（机体坐标系）
-    state.roll_rate = msg->twist.twist.angular.x;
-    state.pitch_rate = msg->twist.twist.angular.y;
-    state.yaw_rate = -msg->twist.twist.angular.z;  // Z 翻转
+    // 角速度: ROS body → NED body
+    state.roll_rate  =  msg->twist.twist.angular.x;
+    state.pitch_rate = -msg->twist.twist.angular.y;
+    state.yaw_rate   = -msg->twist.twist.angular.z;
 
     statePub_.publish(state);
   }

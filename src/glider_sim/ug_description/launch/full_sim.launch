@@ -10,7 +10,7 @@
   <arg name="z" default="-0.126"/>
   <arg name="roll" default="0"/>
   <arg name="pitch" default="0.0"/>
-  <arg name="yaw" default="0"/>
+  <arg name="yaw" default="1.5708"/><!--放置模型是以ENU为坐标系参考，这才是NED的北向朝向-->
   <arg name="debug" default="0"/>
   <arg name="gui" default="true"/>
   <arg name="paused" default="false"/>

@@ -11,8 +11,8 @@
         args="-sdf
               -file $(find ug_description)/models/checkerboard_target/model.sdf
               -model $(arg model_name)
-              -x $(arg north)
-              -y $(arg east)
+              -x $(arg east)
+              -y $(arg north)
               -z $(arg z)
               -Y $(arg yaw)"/>
 </launch>
