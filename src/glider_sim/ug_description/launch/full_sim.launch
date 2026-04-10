@@ -16,6 +16,8 @@
   <arg name="paused" default="false"/>
   <arg name="dashboard" default="false"/>
   <arg name="control" default="true"/>  <!-- 手动调试时默认关闭，用 control:=true 启用 -->
+  <arg name="estimation" default="true"/>  <!-- 状态估计层 (EKF) -->
+  <arg name="use_ground_truth" default="false"/> <!-- true 时 state_converter 直接用真值 -->
   <arg name="rviz" default="true"/>    <!-- RViz 可视化 -->
   <!--RQT控制和节点控制冲突，还没改，不要同时启动-->
 
@@ -39,10 +41,17 @@
               command="load" ns="hardware_sim"/>
   </group>
 
+  <!-- 状态估计层: depth_converter + EKF -->
+  <include if="$(arg estimation)"
+           file="$(find ug_estimation)/launch/estimation.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+  </include>
+
   <!-- 上层控制节点 -->
   <include if="$(arg control)"
            file="$(find ug_control)/launch/control.launch">
     <arg name="namespace" value="$(arg namespace)"/>
+    <arg name="use_ground_truth" value="$(arg use_ground_truth)"/>
   </include>
 
   <!-- 调试用RQT插件 -->

@@ -1,0 +1,65 @@
+# robot_localization EKF 配置 — 水下滑翔机状态估计 v1
+# 融合: IMU 姿态 + 角速度, 深度计 z
+# 不融合: IMU 线加速度, x/y 位置/速度
+
+frequency: 30
+sensor_timeout: 0.2
+two_d_mode: false
+
+publish_tf: true
+publish_acceleration: false
+print_diagnostics: true
+
+# 坐标系配置
+# world_frame = odom，EKF 输出在 odom 帧 (ENU)
+odom_frame: odom
+base_link_frame: base_link
+world_frame: odom
+
+# ── IMU ──
+# 融合: roll, pitch, yaw, vroll, vpitch, vyaw
+# 不融合: 位置, 线速度, 线加速度
+#                   x      y      z      roll   pitch  yaw    vx     vy     vz     vroll  vpitch vyaw   ax     ay     az
+imu0: imu
+imu0_config: [false, false, false,
+              true,  true,  true,
+              false, false, false,
+              true,  true,  true,
+              false, false, false]
+imu0_differential: false
+imu0_relative: false
+imu0_queue_size: 10
+imu0_remove_gravitational_acceleration: true
+
+# ── 深度计 ──
+# 融合: 仅 z 位置
+#                    x      y      z      roll   pitch  yaw    vx     vy     vz     vroll  vpitch vyaw   ax     ay     az
+pose0: depth/pose
+pose0_config: [false, false, true,
+               false, false, false,
+               false, false, false,
+               false, false, false,
+               false, false, false]
+pose0_differential: false
+pose0_relative: false
+pose0_queue_size: 10
+
+use_control: false
+
+# 过程噪声协方差
+#               x     y     z     roll  pitch yaw   vx    vy    vz    vr    vp    vy    ax    ay    az
+process_noise_covariance: [1.0,  0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    1.0,  0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0.01, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0.01, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0.01, 0,    0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0.01, 0,    0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    1.0,  0,    0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    1.0,  0,    0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0.1,  0,    0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0.01, 0,    0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0.01, 0,    0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0.01, 0,    0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0.1,  0,    0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0.1,  0,
+                           0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0,    0.1]

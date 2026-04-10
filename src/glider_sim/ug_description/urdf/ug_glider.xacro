@@ -13,14 +13,16 @@
 
   <!-- 引入 UUV Simulator 公共宏 -->
   <xacro:include filename="$(find uuv_descriptions)/urdf/common.urdf.xacro"/>
-  <!-- 引入本模型的各个组件文件，但先不用传感器，用仿真中的真值 -->
+  <!-- 引入本模型的各个组件文件-->
   <xacro:include filename="$(find ug_description)/urdf/ug_glider_base.xacro"/>
   <xacro:include filename="$(find ug_description)/urdf/ug_glider_gazebo.xacro"/>
   <xacro:include filename="$(find ug_description)/urdf/ug_glider_actuators.xacro"/>
+  <xacro:include filename="$(find ug_description)/urdf/ug_glider_sensors.xacro"/>
 
   <!-- 实例化滑翔机各组件 -->
   <xacro:ug_glider_base namespace="$(arg namespace)" hull_rgba="$(arg hull_rgba)"/>
   <xacro:ug_glider_gazebo namespace="$(arg namespace)" debug="$(arg debug)" hull_color="$(arg hull_color)"/>
   <xacro:ug_glider_actuators namespace="$(arg namespace)"/>
+  <xacro:ug_glider_sensors namespace="$(arg namespace)"/>
 
 </robot>

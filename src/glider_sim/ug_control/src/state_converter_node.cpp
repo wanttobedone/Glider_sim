@@ -1,12 +1,13 @@
 /**
- * 状态转换节点：Gazebo ground truth (ENU) → 滑翔机状态 (NED)
- * 后续传感器节点加入后，完善状态估计节点，这个文件作为输入输出接口
- * 订阅 /ground_truth/pose (nav_msgs/Odometry, Gazebo P3D 输出, ENU 世界帧)
+ * 状态转换节点：ENU Odometry → 滑翔机状态 (NED)
+ *
+ * 默认订阅 EKF 输出 /{ns}/odometry/filtered (nav_msgs/Odometry, ENU)
+ * 可通过参数 use_ground_truth:=true 切换为 Gazebo 真值 /{ns}/ground_truth/pose
+ *
  * 发布 /{ns}/glider_state (ug_msgs/GliderState, NED 坐标系)
  *
  * 坐标系说明
- *   Gazebo world 帧 = ENU: X=East, Y=North, Z=Up
- *   (由 uuv_assistants/publish_world_ned_frame.launch 的 world→world_ned 变换确认)
+ *   EKF / Gazebo 输出帧 = ENU: X=East, Y=North, Z=Up
  *
  * 位置 ENU → NED:
  *   north = y_enu,  east = x_enu,  depth = -z_enu
@@ -14,7 +15,7 @@
  * 姿态 ENU → NED (完整旋转变换):
  *   R_ned = R_w^n · R_b^w · T_b
  *   其中:
- *     R_b^w  = Gazebo 四元数对应旋转矩阵 (body → ENU world)
+ *     R_b^w  = 四元数对应旋转矩阵 (body → ENU world)
  *     R_w^n  = [0,1,0; 1,0,0; 0,0,-1]  (ENU world → NED world)
  *     T_b    = diag(1,-1,-1)            (ROS body X前Y左Z上 → NED body X前Y右Z下)
  *   再从 R_ned 提取 ZYX 欧拉角 (roll, pitch, yaw)
@@ -39,16 +40,31 @@ public:
   StateConverterNode()
   {
     ros::NodeHandle nh("~");
-    ros::NodeHandle nhPub(nh.param<std::string>("namespace", "ug_glider"));
+    std::string ns = nh.param<std::string>("namespace", "ug_glider");
+    ros::NodeHandle nhPub(ns);
+
+    bool useGroundTruth = nh.param<bool>("use_ground_truth", false);
 
     std::string poseTopic;
-    nh.param<std::string>("pose_topic", poseTopic, "/ug_glider/ground_truth/pose");
+    if (useGroundTruth)
+    {
+      poseTopic = "/" + ns + "/ground_truth/pose";
+      ROS_INFO("[StateConverter] 模式: 真值 (ground truth)");
+    }
+    else
+    {
+      poseTopic = "/" + ns + "/odometry/filtered";
+      ROS_INFO("[StateConverter] 模式: EKF 估计 (odometry/filtered)");
+    }
+
+    // 允许参数覆盖话题名
+    nh.param<std::string>("pose_topic", poseTopic, poseTopic);
 
     poseSub_ = nh_.subscribe(poseTopic, 1, &StateConverterNode::onPose, this);
     statePub_ = nhPub.advertise<ug_msgs::GliderState>("glider_state", 1);
 
     ROS_INFO("[StateConverter] 订阅: %s", poseTopic.c_str());
-    ROS_INFO("[StateConverter] 发布: /%s/glider_state", nhPub.getNamespace().c_str());
+    ROS_INFO("[StateConverter] 发布: %s/glider_state", nhPub.getNamespace().c_str());
   }
 
   void onPose(const nav_msgs::Odometry::ConstPtr &msg)
@@ -71,18 +87,8 @@ public:
     tf2::Matrix3x3 R_bw(q);
 
     // R_ned = R_w^n · R_b^w · T_b
-    // 其中 R_w^n = [0,1,0; 1,0,0; 0,0,-1], T_b = diag(1,-1,-1)
-    //
-    // 分两步展开:
     // Step A: M = R_b^w · T_b (右乘 T_b = 第1、2列取反)
-    //   M[i][0] =  R_bw[i][0]
-    //   M[i][1] = -R_bw[i][1]
-    //   M[i][2] = -R_bw[i][2]
-    //
     // Step B: R_ned = R_w^n · M (左乘 R_w^n = 行重排)
-    //   R_ned row0 = M row1
-    //   R_ned row1 = M row0
-    //   R_ned row2 = -M row2
     tf2::Matrix3x3 R_ned;
     R_ned.setValue(
          R_bw[1][0], -R_bw[1][1], -R_bw[1][2],   // row0 = M row1

@@ -1,0 +1,19 @@
+<!--
+  状态估计层启动文件
+  启动 depth_converter + robot_localization EKF
+-->
+<launch>
+  <arg name="namespace" default="ug_glider"/>
+
+  <!-- 深度转换: FluidPressure → PoseWithCovarianceStamped -->
+  <node name="depth_converter" pkg="ug_estimation" type="depth_converter_node"
+        ns="$(arg namespace)" output="screen">
+    <param name="output_frame" value="odom"/>
+  </node>
+
+  <!-- EKF: IMU 姿态/角速度 + 深度 z -->
+  <node name="ekf_se" pkg="robot_localization" type="ekf_localization_node"
+        ns="$(arg namespace)" clear_params="true" output="screen">
+    <rosparam command="load" file="$(find ug_estimation)/config/ekf.yaml"/>
+  </node>
+</launch>
