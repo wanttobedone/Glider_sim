@@ -172,7 +172,7 @@ private:
     int newMode = msg->data;
     if (newMode != controlMode_)
     {
-      // Bumpless transfer: reset 所有 PID 积分器和微分历史
+      // Bumpless transfer, reset 所有 PID 积分器和微分历史
       pitchPID_.reset();
       rollPID_.reset();
       depthOuterPID_.reset();
@@ -222,11 +222,11 @@ private:
     cmd.header.stamp = ros::Time::now();
 
     // Heading由舵角控制
-    //取反
+
     double headingError = targetHeading_ - currentState_.yaw;
     while (headingError > M_PI) headingError -= 2.0 * M_PI;
     while (headingError < -M_PI) headingError += 2.0 * M_PI;
-    cmd.rudder_angle = -headingPID_.compute(headingError, dt);
+    cmd.rudder_angle = headingPID_.compute(headingError, dt);
 
     // Roll由电池旋转控制（两种模式共用，目标默认0）
     // 取反，电池旋转正方向与 roll 修正方向相反

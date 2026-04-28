@@ -8,12 +8,16 @@
   <!-- 深度转换: FluidPressure → PoseWithCovarianceStamped -->
   <node name="depth_converter" pkg="ug_estimation" type="depth_converter_node"
         ns="$(arg namespace)" output="screen">
-    <param name="output_frame" value="odom"/>
+    <param name="output_frame" value="$(arg namespace)/odom"/>
   </node>
 
-  <!-- EKF: IMU 姿态/角速度 + 深度 z -->
+  <!-- EKF: IMU 姿态/角速度/线加速度 + 深度 z -->
   <node name="ekf_se" pkg="robot_localization" type="ekf_localization_node"
         ns="$(arg namespace)" clear_params="true" output="screen">
     <rosparam command="load" file="$(find ug_estimation)/config/ekf.yaml"/>
+    <!-- 覆盖帧名，匹配带命名空间的 tf 树 -->
+    <param name="base_link_frame" value="$(arg namespace)/base_link"/>
+    <param name="odom_frame" value="$(arg namespace)/odom"/>
+    <param name="world_frame" value="$(arg namespace)/odom"/>
   </node>
 </launch>

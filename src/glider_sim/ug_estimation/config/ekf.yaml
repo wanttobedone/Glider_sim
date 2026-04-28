@@ -1,12 +1,12 @@
-# robot_localization EKF 配置 — 水下滑翔机状态估计 v1
-# 融合: IMU 姿态 + 角速度, 深度计 z
-# 不融合: IMU 线加速度, x/y 位置/速度
+# robot_localization EKF 配置 — 水下滑翔机状态估计
+# 融合IMU 姿态 + 角速度 + 线加速度, 深度计 z
+# x/y 无绝对量测，仅靠加速度积分，会缓慢漂移
 
 frequency: 30
 sensor_timeout: 0.2
 two_d_mode: false
 
-publish_tf: true
+publish_tf: false
 publish_acceleration: false
 print_diagnostics: true
 
@@ -16,22 +16,22 @@ odom_frame: odom
 base_link_frame: base_link
 world_frame: odom
 
-# ── IMU ──
-# 融合: roll, pitch, yaw, vroll, vpitch, vyaw
-# 不融合: 位置, 线速度, 线加速度
+#    IMU   
+# 融合: roll, pitch, yaw, vroll, vpitch, vyaw, ax, ay, az
+# 不融合: 位置, 线速度 (由 EKF 内部积分加速度得到)
 #                   x      y      z      roll   pitch  yaw    vx     vy     vz     vroll  vpitch vyaw   ax     ay     az
 imu0: imu
 imu0_config: [false, false, false,
               true,  true,  true,
               false, false, false,
               true,  true,  true,
-              false, false, false]
+              true,  true,  true]
 imu0_differential: false
 imu0_relative: false
 imu0_queue_size: 10
 imu0_remove_gravitational_acceleration: true
 
-# ── 深度计 ──
+#    深度计   
 # 融合: 仅 z 位置
 #                    x      y      z      roll   pitch  yaw    vx     vy     vz     vroll  vpitch vyaw   ax     ay     az
 pose0: depth/pose
