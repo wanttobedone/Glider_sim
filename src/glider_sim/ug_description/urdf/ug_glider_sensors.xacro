@@ -17,6 +17,11 @@
   <xacro:property name="pressure_y" value="0.0"/>
   <xacro:property name="pressure_z" value="0.1"/>
 
+  <!-- 磁力计位置，相对于base_link，与 IMU 同位置 -->
+  <xacro:property name="mag_x" value="0.0"/>
+  <xacro:property name="mag_y" value="0.0"/>
+  <xacro:property name="mag_z" value="0.0"/>
+
   <!-- 宏定义-->
 
   <xacro:macro name="ug_glider_sensors" params="namespace">
@@ -121,16 +126,63 @@
       <origin xyz="${pressure_x} ${pressure_y} ${pressure_z}" rpy="0 0 0"/>
     </joint>
 
+    <!-- 防止 fixed joint 把 pressure_link 合并进 base_link，否则插件按名字找不到 -->
+    <gazebo reference="${namespace}/pressure_link">
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+    </gazebo>
+    <gazebo reference="${namespace}/pressure_joint">
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+
     <gazebo>
       <plugin name="${namespace}_pressure_plugin" filename="libug_pressure_sensor_plugin.so">
         <robot_namespace>${namespace}</robot_namespace>
-        <link_name>${namespace}/base_link</link_name>
+        <link_name>${namespace}/pressure_link</link_name>
         <sensor_topic>pressure</sensor_topic>
         <update_rate>10</update_rate>
         <noise_sigma>100.0</noise_sigma>
         <standard_pressure>101325.0</standard_pressure>
         <water_density>1028.0</water_density>
         <gravity>9.81</gravity>
+      </plugin>
+    </gazebo>
+
+    <!-- 磁力计 (自研 ug_sensor 插件) -->
+    <link name="${namespace}/mag_link">
+      <inertial>
+        <mass value="0.001"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
+      </inertial>
+    </link>
+
+    <joint name="${namespace}/mag_joint" type="fixed">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/mag_link"/>
+      <origin xyz="${mag_x} ${mag_y} ${mag_z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- 防止 fixed joint 把 mag_link 合并进 base_link -->
+    <gazebo reference="${namespace}/mag_link">
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+    </gazebo>
+    <gazebo reference="${namespace}/mag_joint">
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+
+    <gazebo>
+      <plugin name="${namespace}_mag_plugin" filename="libug_magnetometer_plugin.so">
+        <robot_namespace>${namespace}</robot_namespace>
+        <link_name>${namespace}/mag_link</link_name>
+        <sensor_topic>mag</sensor_topic>
+        <update_rate>50</update_rate>
+        <reference_frame>ENU</reference_frame>
+        <field_strength_T>5.0e-5</field_strength_T>
+        <declination_deg>0.0</declination_deg>
+        <inclination_deg>45.0</inclination_deg>
+        <noise_sigma_T>5.0e-7</noise_sigma_T>
+        <hard_iron_T>0 0 0</hard_iron_T>
+        <soft_iron>1 0 0  0 1 0  0 0 1</soft_iron>
       </plugin>
     </gazebo>
 

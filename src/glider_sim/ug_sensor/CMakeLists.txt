@@ -10,7 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(gazebo REQUIRED)
 
 catkin_package(
-  LIBRARIES ug_pressure_sensor_plugin
+  LIBRARIES ug_pressure_sensor_plugin ug_magnetometer_plugin
   CATKIN_DEPENDS gazebo_ros roscpp sensor_msgs
 )
 
@@ -27,6 +27,15 @@ add_library(ug_pressure_sensor_plugin SHARED
   src/ug_pressure_sensor_plugin.cpp
 )
 target_link_libraries(ug_pressure_sensor_plugin
+  ${catkin_LIBRARIES}
+  ${GAZEBO_LIBRARIES}
+)
+
+# 磁力计插件
+add_library(ug_magnetometer_plugin SHARED
+  src/ug_magnetometer_plugin.cpp
+)
+target_link_libraries(ug_magnetometer_plugin
   ${catkin_LIBRARIES}
   ${GAZEBO_LIBRARIES}
 )

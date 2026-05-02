@@ -35,6 +35,11 @@ src/my_glider_sim/
 .DS_Store
 Thumbs.db
 
+# EKF 离线回放数据 (baseline rosbag, 不进 git)
+data/
+*.bag
+*.bag.active
+
 # 临时验证用的脚本
 src/glider_sim/ug_viz/scripts/glider_viz_node
 
