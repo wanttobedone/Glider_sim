@@ -111,7 +111,7 @@
       </sensor>
     </gazebo>
 
-    <!--压力传感器，深度测量 (自研 ug_sensor 插件，替代 UUV 的有 segfault 问题的版本) -->
+    <!--压力传感器，深度测量，自己实现，不用UUV 的有 segfault 问题的版本 -->
     <link name="${namespace}/pressure_link">
       <inertial>
         <mass value="0.01"/>

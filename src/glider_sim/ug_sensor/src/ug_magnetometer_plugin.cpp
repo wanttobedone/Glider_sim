@@ -8,9 +8,7 @@
  *   施加 soft-iron 矩阵 W、hard-iron 偏置 V 与高斯噪声
  *   发布 sensor_msgs/MagneticField (单位 Tesla)
  *
- * 注意：发布的 m_b 仍处于 ROS body-FLU 约定下；FLU→FRD 的轴翻转
- * 由 EKF 的 ROS sensor_adapter 完成，本插件不做。
- *
+ * 注意：发布的 m_b 仍处于 ROS body-FLU 约定下；FLU→FRD 的轴翻转由EKF 的 ROS sensor_adapter 完成
  * SDF 参数：
  *   <robot_namespace>     ROS 命名空间
  *   <link_name>           磁力计绑定 link (建议 mag_link)
@@ -194,7 +192,7 @@ private:
   boost::shared_ptr<ros::NodeHandle> rosNode_;
   ros::Publisher pub_;
 
-  double updateRate_ = 50.0;
+  double updateRate_ = 50.0; //传感器消息更新频率
   double noiseSigma_ = 5.0e-7;       // T
   std::array<double, 3> hardIron_{0, 0, 0};
   std::array<double, 9> softIron_{1, 0, 0, 0, 1, 0, 0, 0, 1};

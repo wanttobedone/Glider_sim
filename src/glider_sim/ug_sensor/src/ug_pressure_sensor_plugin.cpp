@@ -1,9 +1,7 @@
 /**
  * UG Pressure Sensor Plugin
- *
- * 简洁的 Gazebo ModelPlugin，模拟水下压力传感器。
+ * Gazebo ModelPlugin，模拟水下压力传感器。
  * 替代 UUV Simulator 的 SubseaPressureROSPlugin（有 segfault 问题）。
- *
  *   读取指定 link 的世界坐标 Z（ENU，水下为负）
  *   计算压力: P = P_atm + rho * g * depth
  *   加入高斯噪声
