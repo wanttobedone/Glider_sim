@@ -1,0 +1,37 @@
+# 自研 ESKF (glider_ekf_node) 参数 — Phase 1
+# 内部坐标系 NED-FRD；core 不读 imu.orientation。
+
+# --- 物理常数 (与压力计插件保持一致) ---
+gravity: 9.81
+atmospheric_pressure: 101325.0   # Pa
+water_density: 1028.0            # kg/m^3
+
+# --- 初始化 / 对齐 ---
+# init_yaw_ned_rad 必须是 NED 航向 (北=0)。严禁直接塞 Gazebo ENU yaw。
+# 默认场景 spawn 时 Gazebo ENU yaw=1.5708 对应 NED yaw=0。
+init_yaw_ned_rad: 0.0
+static_align_seconds: 3.0        # 启动静止对齐窗口
+align_gyro_thresh: 0.02          # rad/s，静止样本准入
+align_acc_thresh: 0.2            # m/s^2，|‖a‖-g| 阈值
+
+# --- 时序 / 门控 ---
+dt_max: 0.1                      # s，超过则跳过该次 predict 并 reset_count++
+nis_gate_depth: 6.635            # χ²(0.99,1)
+
+# --- 压力计 ---
+depth_meas_variance: 0.01        # m^2 (σ≈0.1 m)
+# 压力计杠杆臂 (FRD)。base_link FLU 偏移 (0,0,0.1) → FRD (0,0,-0.1)
+r_pressure_frd: [0.0, 0.0, -0.1]
+
+# --- 连续时间噪声密度 ---
+sigma_g: 0.001                   # rad/s/sqrt(Hz)
+sigma_a: 0.01                    # m/s^2/sqrt(Hz)
+sigma_bg: 0.00001                # rad/s^2/sqrt(Hz)
+sigma_ba: 0.0001                 # m/s^3/sqrt(Hz)
+
+# --- 初始协方差对角 ---
+p0_pos: 100.0                    # m^2 (深度先验宽松)
+p0_vel: 0.01                     # (m/s)^2
+p0_att: 0.01                     # rad^2
+p0_bg: 0.0001                    # (rad/s)^2
+p0_ba: 0.001                     # (m/s^2)^2

@@ -65,11 +65,29 @@ add_executable(depth_converter_node src/depth_converter_node.cpp)
 target_link_libraries(depth_converter_node ${catkin_LIBRARIES})
 
 # ============================================================================
+# ROS 节点：glider_ekf (自研 ESKF wrapper)
+#   link ug_ekf_core (平台无关) + catkin。core 仍不 link ROS。
+# ============================================================================
+add_executable(glider_ekf_node src/glider_ekf_node.cpp)
+target_link_libraries(glider_ekf_node ug_ekf_core ${catkin_LIBRARIES})
+add_dependencies(glider_ekf_node ${catkin_EXPORTED_TARGETS})
+
+# ============================================================================
 # 单元测试 (catkin_add_gtest)
 # ============================================================================
 if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(test_quaternion test/test_quaternion.cpp)
   if(TARGET test_quaternion)
     target_link_libraries(test_quaternion ug_ekf_core)
+  endif()
+
+  catkin_add_gtest(test_imu_propagator test/test_imu_propagator.cpp)
+  if(TARGET test_imu_propagator)
+    target_link_libraries(test_imu_propagator ug_ekf_core)
+  endif()
+
+  catkin_add_gtest(test_depth_update test/test_depth_update.cpp)
+  if(TARGET test_depth_update)
+    target_link_libraries(test_depth_update ug_ekf_core)
   endif()
 endif()

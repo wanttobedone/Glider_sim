@@ -12,6 +12,7 @@ add_message_files(FILES
   GliderState.msg
   MissionState.msg
   SwarmComm.msg
+  EskfDiagnostics.msg
 )
 
 generate_messages(DEPENDENCIES

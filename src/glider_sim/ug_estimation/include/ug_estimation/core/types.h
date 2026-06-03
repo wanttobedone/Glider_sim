@@ -63,9 +63,19 @@ struct NoiseParams {
 };
 
 struct InitParams {
-  Scalar g;                       // 重力加速度模 (m/s^2)，NED 下 g_NED=[0,0,g]
+  Scalar g;                       // 重力加速度模 (m/s^2)，NED 下 g_NED=[0,0,+g]
   Scalar mag_declination_rad;     // 磁偏角 (rad)，对齐 mag yaw 时使用
   Vec3   r_pressure_FRD;          // 压力计在 FRD body 坐标 (m)，含杠杆臂
+
+  // 初始 NED yaw (rad)；Phase 1 无 mag/航向观测，由 wrapper 显式给定。
+  // 严禁直接把 Gazebo ENU yaw 写入此处，必须先做 ENU→NED 转换。
+  Scalar init_yaw_ned_rad;
+
+  // dt 上限 (s)，IMU 跳帧/启动时超出则跳过该次 predict 并 reset_count++
+  Scalar dt_max;
+
+  // 深度 NIS 门限（默认 χ²(0.99,1)=6.635）
+  Scalar nis_gate_depth;
 
   NoiseParams noise;
 

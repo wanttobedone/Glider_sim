@@ -17,7 +17,11 @@
   <arg name="dashboard" default="false"/>
   <arg name="control" default="true"/>  <!-- 手动调试时默认关闭，用 control:=true 启用 -->
   <arg name="estimation" default="true"/>  <!-- 状态估计层 (EKF) -->
+  <arg name="estimator" default="robot_localization"/> <!-- robot_localization | ug_eskf -->
+  <arg name="init_yaw_ned_rad" default="0.0"/> <!-- 自研 ESKF 的 NED 初始航向 -->
   <arg name="use_ground_truth" default="false"/> <!-- true 时 state_converter 直接用真值 -->
+  <!-- 自研 ESKF 时 state_converter 改订阅其输出；baseline 时留空走默认 -->
+  <arg name="pose_topic" default="$(eval '/' + namespace + '/odometry/filtered_eskf' if estimator == 'ug_eskf' else '')"/>
   <arg name="rviz" default="true"/>    <!-- RViz 可视化 -->
   <!--RQT控制和节点控制冲突，还没改，不要同时启动-->
 
@@ -41,10 +45,12 @@
               command="load" ns="hardware_sim"/>
   </group>
 
-  <!-- 状态估计层: depth_converter + EKF -->
+  <!-- 状态估计层: baseline (robot_localization) 或自研 ESKF -->
   <include if="$(arg estimation)"
            file="$(find ug_estimation)/launch/estimation.launch">
     <arg name="namespace" value="$(arg namespace)"/>
+    <arg name="estimator" value="$(arg estimator)"/>
+    <arg name="init_yaw_ned_rad" value="$(arg init_yaw_ned_rad)"/>
   </include>
 
   <!-- 上层控制节点 -->
@@ -52,6 +58,7 @@
            file="$(find ug_control)/launch/control.launch">
     <arg name="namespace" value="$(arg namespace)"/>
     <arg name="use_ground_truth" value="$(arg use_ground_truth)"/>
+    <arg name="pose_topic" value="$(arg pose_topic)"/>
   </include>
 
   <!-- 调试用RQT插件 -->

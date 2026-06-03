@@ -6,12 +6,16 @@
   <arg name="namespace" default="ug_glider"/>
   <arg name="mission" default="true"/>
   <arg name="use_ground_truth" default="false"/>
+  <!-- 数据源话题覆盖；空字符串时 state_converter 用内部默认 (odometry/filtered) -->
+  <arg name="pose_topic" default=""/>
 
   <!-- 状态转换: ENU Odometry → NED GliderState -->
   <!-- use_ground_truth:=true 时订阅 P3D 真值，false 时订阅 EKF 输出 -->
+  <!-- pose_topic 非空时覆盖订阅话题 (用于切到自研 ESKF) -->
   <node name="$(arg namespace)_state_converter" pkg="ug_control" type="state_converter_node" output="screen">
     <param name="namespace" value="$(arg namespace)"/>
     <param name="use_ground_truth" value="$(arg use_ground_truth)"/>
+    <param name="pose_topic" value="$(arg pose_topic)" if="$(eval pose_topic != '')"/>
   </node>
 
   <!-- PID控制器 -->
