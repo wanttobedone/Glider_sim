@@ -1,4 +1,4 @@
-# 自研 ESKF 诊断信息 (Phase 1)
+# ESKF 诊断信息 (Phase 1)
 # 由 glider_ekf_node 发布，便于离线分析与在线监控滤波器健康度。
 
 Header header
@@ -11,6 +11,11 @@ float64 dt_last         # 最近一次 predict 的步长 (s)
 float64 nis_depth       # 最近一次深度更新的 NIS
 uint32 accept_depth     # 累计接受次数
 uint32 reject_depth     # 累计 NIS 拒绝次数
+
+# accel 找平更新统计 (约束 roll/pitch)
+float64 nis_tilt        # 最近一次找平更新的 NIS
+uint32 accept_tilt      # 累计接受次数
+uint32 reject_tilt      # 累计 NIS 拒绝次数
 
 # 跳帧/复位计数 (dt 超限触发)
 uint32 reset_count

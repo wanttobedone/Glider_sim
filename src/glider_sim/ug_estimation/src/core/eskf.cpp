@@ -7,6 +7,7 @@
 #include "ug_estimation/core/quaternion_utils.h"
 #include "ug_estimation/core/imu_propagator.h"
 #include "ug_estimation/core/measurements/depth.h"
+#include "ug_estimation/core/measurements/accel_tilt.h"
 
 #include <cmath>
 
@@ -108,6 +109,46 @@ bool Eskf::updateDepth(Scalar t, Scalar depth_m, Scalar R) {
   return true;
 }
 
+bool Eskf::updateAccelTilt(Scalar /*t*/, const Vec3& accel_FRD, Scalar R_tilt) {
+  if (!initialized_) return false;
+
+  Mat3x15 H;
+  BuildAccelTiltH(x_, params_.g, H);
+
+  const Vec3 h = PredictAccelSpecificForce(x_, params_.g);
+  const Vec3 y = accel_FRD - h;                       // innovation (3x1)
+
+  // S = H P H^T + R·I3
+  Mat3 S = H * P_ * H.transpose();
+  S.diagonal().array() += R_tilt;
+
+  // NIS = y^T S^-1 y
+  const Mat3 S_inv = S.inverse();
+  const Scalar nis = (y.transpose() * S_inv * y)(0, 0);
+  diag_.last_nis_tilt = nis;
+
+  if (!(nis == nis) || nis > params_.nis_gate_tilt) {  // NaN 或超门限
+    diag_.reject_tilt++;
+    return false;
+  }
+
+  // K = P H^T S^-1  (15x3)
+  const Eigen::Matrix<Scalar, 15, 3> K = P_ * H.transpose() * S_inv;
+
+  // 注入
+  const Vec15 dx = K * y;
+  injectErrorState(dx);
+
+  // Joseph form: P = (I-KH)P(I-KH)^T + K R K^T，R = R_tilt·I3
+  const Mat15 I15 = Mat15::Identity();
+  const Mat15 IKH = I15 - K * H;
+  P_ = IKH * P_ * IKH.transpose() + (K * R_tilt) * K.transpose();
+  enforceSymmetry();
+
+  diag_.accept_tilt++;
+  return true;
+}
+
 bool Eskf::updateMag(Scalar /*t*/, const Vec3& /*mag_FRD*/, Scalar /*R_yaw*/) {
   // TODO Phase 2
   return false;
@@ -123,13 +164,24 @@ bool Eskf::updateDvl(Scalar /*t*/, const Vec3& /*v_FRD*/, const Mat3& /*R*/) {
   return false;
 }
 
-// 静态对齐：
-//   roll  = atan2(-a_y, -a_z)                       (FRD 体系，静止 a≈[0,0,-g])
-//   pitch = atan2(a_x, sqrt(a_y^2 + a_z^2))
-//   yaw   = params_.init_yaw_ned_rad                (无 mag 时直接用先验)
-//   b_g   = mean(gyro)
-// 准入条件（在 wrapper 端筛选样本，core 假设 caller 已确保静止）：
-//   |gyro|<0.02 rad/s 且 ||a|-g|<0.2 m/s²
+// 静态对齐（方案 A：水平部署假设捕获 b_a）。
+//
+// 背景：MEMS 加速度计有 ~40mg 常值零偏，单测静止 accel 无法把"零偏"和"倾角"
+//   分开。Phase 1 深度更新下水平 b_a 不可观，若按 accel→tilt 反推姿态会把
+//   零偏误当成 ~2.3° 倾角，顶穿 roll/pitch≤1° 阈值。
+//
+// 真机标准做法（放平标定）：入水/部署时滑翔机近似水平，于是
+//   - 姿态：roll=pitch=0，yaw=先验 init_yaw_ned_rad
+//   - 加计零偏：静止时 a_NED 应=0 ⇒ R_NB·(a_mean - b_a) + g_NED = 0
+//     水平(绕 Down 轴 yaw 旋转不改 [0,0,-g]) ⇒ a_mean - b_a = [0,0,-g]
+//     ⇒ b_a = a_mean - [0,0,-g] = a_mean + [0,0,+g]
+//   - 陀螺零偏：b_g = mean(gyro)（静止真角速度=0）
+//
+// 代价：若部署时真有安装倾角，会被误记进 b_a；对水平部署的滑翔机可接受
+//   （本仿真 ground_truth 静止姿态 roll=0/pitch=-0.48°，残差<0.5°）。
+//   后续如需建模安装角，可加 init_roll/init_pitch 先验参数扣除。
+//
+// 准入条件由 wrapper 端筛样本，core 假设 caller 已确保静止。
 void Eskf::staticAlign(const Vec3* acc_buf, const Vec3* gyro_buf,
                        const Vec3* /*mag_buf*/, std::size_t n) {
   if (!initialized_ || n == 0) return;
@@ -144,26 +196,17 @@ void Eskf::staticAlign(const Vec3* acc_buf, const Vec3* gyro_buf,
   const Vec3 a_mean = a_sum * inv_n;
   const Vec3 g_mean = g_sum * inv_n;
 
-  // 从加速度恢复 roll/pitch（假设 a_mean ≈ [0,0,-g]_FRD）
-  // 等价公式 (Tait-Bryan ZYX):
-  //   pitch = atan2( a_x, sqrt(a_y^2 + a_z^2) )    (a_x 增大 ⇒ 抬头 ⇒ pitch+，沿 NED 约定)
-  //   roll  = atan2(-a_y, -a_z)
-  const Scalar ax = a_mean.x();
-  const Scalar ay = a_mean.y();
-  const Scalar az = a_mean.z();
-  const Scalar pitch = std::atan2(ax, std::sqrt(ay * ay + az * az));
-  const Scalar roll  = std::atan2(-ay, -az);
-  const Scalar yaw   = params_.init_yaw_ned_rad;
-
-  // 用 ZYX (yaw-pitch-roll) 构造 q_NB
-  const Eigen::AngleAxis<Scalar> Rz(yaw,   Vec3::UnitZ());
-  const Eigen::AngleAxis<Scalar> Ry(pitch, Vec3::UnitY());
-  const Eigen::AngleAxis<Scalar> Rx(roll,  Vec3::UnitX());
-  x_.q_NB = (Rz * Ry * Rx);
+  // 姿态：水平 + 先验 yaw（仅绕 Down 轴）
+  const Scalar yaw = params_.init_yaw_ned_rad;
+  x_.q_NB = Eigen::AngleAxis<Scalar>(yaw, Vec3::UnitZ());
   x_.q_NB.normalize();
 
-  // b_g 直接用 gyro 均值（静止 ⇒ 真角速度=0）
+  // 陀螺零偏 = 静止角速度均值
   x_.b_g = g_mean;
+
+  // 加计零偏 = a_mean - [0,0,-g]（水平静止下的期望比力为 [0,0,-g]_FRD）
+  const Vec3 expected_specific_force(Scalar(0), Scalar(0), -params_.g);
+  x_.b_a = a_mean - expected_specific_force;
 }
 
 bool Eskf::injectErrorState(const Vec15& dx) {

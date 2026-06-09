@@ -30,16 +30,32 @@ BAG_OUT="${OUT_DIR}/eval_out_${STAMP}.bag"
 PIDS=()
 cleanup() {
   echo "[eval] 清理进程..."
+  # record 用 SIGINT 干净收尾（让 .bag 正常重命名，不留 .active）
+  pkill -INT -f "rosbag record -O ${BAG_OUT}" 2>/dev/null || true
+  sleep 2
   for p in "${PIDS[@]}"; do kill "${p}" 2>/dev/null || true; done
-  pkill -f "rosbag record -O ${BAG_OUT}" 2>/dev/null || true
+  pkill -f "rosbag play" 2>/dev/null || true
+  pkill -f "estimation.launch" 2>/dev/null || true
   kill "${ROSCORE_PID:-}" 2>/dev/null || true
 }
 trap cleanup EXIT
 
+# ★ 关键加固：启动前强清理任何 ROS 残留，避免上一次 run 的 rosbag play/record
+#   叠加进来污染本次时间戳（曾导致 eval_out 时间戳回环、pitch 评估失真）。
+echo "[eval] 预清理残留 ROS 进程..."
+pkill -9 -f "rosbag play"   2>/dev/null || true
+pkill -9 -f "rosbag record" 2>/dev/null || true
+pkill -9 -f "glider_ekf"    2>/dev/null || true
+pkill -9 -f "ekf_localization" 2>/dev/null || true
+pkill -9 -f "estimation.launch" 2>/dev/null || true
+pkill -9 -f "rosmaster"     2>/dev/null || true
+pkill -9 -f "roscore"       2>/dev/null || true
+sleep 3
+
 echo "[eval] 启动 roscore"
 roscore >/dev/null 2>&1 &
 ROSCORE_PID=$!
-sleep 3
+sleep 5
 rosparam set /use_sim_time true
 
 echo "[eval] 启动两个估计器 (ug_eskf + robot_localization)"
@@ -49,7 +65,10 @@ PIDS+=($!)
 roslaunch ug_estimation estimation.launch namespace:="${NS}" \
     estimator:=robot_localization >/dev/null 2>&1 &
 PIDS+=($!)
-sleep 4
+sleep 5
+# 确认只有一个 EKF 节点（防叠加）
+NODECNT=$(rosnode list 2>/dev/null | grep -c glider_ekf || true)
+echo "[eval] glider_ekf 节点数=${NODECNT} (应为 1)"
 
 REC_TOPICS=(
   "/${NS}/ground_truth/pose"
@@ -67,8 +86,16 @@ rosbag play --clock "${BAG_IN}"
 
 echo "[eval] 回放结束，等待缓冲落盘"
 sleep 3
-pkill -f "rosbag record -O ${BAG_OUT}" 2>/dev/null || true
-sleep 2
+# SIGINT 让 record 干净收尾并把 .active 重命名为 .bag
+pkill -INT -f "rosbag record -O ${BAG_OUT}" 2>/dev/null || true
+sleep 3
+
+# 若仍是 .active（未干净收尾），reindex 抢救
+if [[ ! -f "${BAG_OUT}" && -f "${BAG_OUT}.active" ]]; then
+  echo "[eval] 检测到 .active，reindex 抢救"
+  mv "${BAG_OUT}.active" "${BAG_OUT}"
+  rosbag reindex "${BAG_OUT}" >/dev/null 2>&1 || true
+fi
 
 echo "[eval] 分析"
 python3 "$(dirname "$0")/analyze.py" "${BAG_OUT}" --ns "${NS}"

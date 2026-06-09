@@ -3,11 +3,11 @@
 // ROS ↔ EKF core 的传感器适配层（仅 wrapper 编译，core 永不见此文件）。
 // 职责：把 ROS/Gazebo body-FLU 原始量转成 EKF core 所需 body-FRD raw 量。
 //
-// === 硬约束 (C2) ===
-// 永不读取 imu.orientation。Gazebo IMU 的姿态是"作弊真值"，
+// 硬约束 (C2)
+// 不读取 imu.orientation。Gazebo IMU 的姿态是真值
 // 真实嵌入式 IMU 不提供，core 必须只吃 angular_velocity + linear_acceleration。
 //
-// === 轴翻转 FLU → FRD ===
+// 轴翻转 FLU → FRD
 //   FLU: X前 Y左 Z上   FRD: X前 Y右 Z下
 //   翻转矩阵 diag(1,-1,-1)：
 //     gyro_FRD  = [ ωx, -ωy, -ωz]

@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include <cmath>
+#include <vector>
 #include "ug_estimation/core/eskf.h"
 #include "ug_estimation/core/imu_propagator.h"
 
@@ -175,6 +176,42 @@ TEST(ImuPropagator, JacobianFinitDifferenceSanity) {
   for (int i = 0; i < 15; ++i) {
     EXPECT_GE(Q(i, i), 0) << "i=" << i;
   }
+}
+
+// 方案 A 静态对齐：水平假设捕获 accel 零偏，且对齐后静止传播不漂。
+TEST(StaticAlign, CapturesAccelBiasLevelAssumption) {
+  Eskf ekf;
+  InitParams p = MakeDefaultParams();
+  p.init_yaw_ned_rad = Scalar(0.3);
+  State x0;
+  ekf.initialize(p, x0, MakeDefaultP0(p));
+
+  // 模拟带零偏的静止 FRD 比力：真值 [0,0,-g] + 零偏 [0.18,-0.41,-0.23]
+  const Vec3 true_bias(0.18, -0.41, -0.23);
+  const Vec3 acc_static = Vec3(0, 0, -kG) + true_bias;
+  std::vector<Vec3> accs(200, acc_static);
+  std::vector<Vec3> gyros(200, Vec3(0.01, -0.02, 0.005));  // 带陀螺零偏
+
+  ekf.staticAlign(accs.data(), gyros.data(), nullptr, accs.size());
+
+  // b_a 应捕获到注入零偏
+  EXPECT_LT((ekf.state().b_a - true_bias).norm(), 1e-6)
+      << "b_a=" << ekf.state().b_a.transpose();
+  // b_g 应等于 gyro 均值
+  EXPECT_LT((ekf.state().b_g - Vec3(0.01, -0.02, 0.005)).norm(), 1e-6);
+  // yaw 应为先验 (纯绕 Down 轴 0.3rad)，roll/pitch≈0
+  // q = [cos(0.15), 0, 0, sin(0.15)] (w,x,y,z)
+  EXPECT_NEAR(ekf.state().q_NB.w(), std::cos(0.15), 1e-6);
+  EXPECT_NEAR(ekf.state().q_NB.z(), std::sin(0.15), 1e-6);
+  EXPECT_NEAR(ekf.state().q_NB.x(), 0.0, 1e-6);
+  EXPECT_NEAR(ekf.state().q_NB.y(), 0.0, 1e-6);
+
+  // 对齐后用同样带零偏的比力传播，速度不应漂移（零偏已被扣除）
+  for (int i = 1; i <= 1500; ++i) {  // 30s
+    ekf.predictImu(i * Scalar(0.02), Vec3(0.01, -0.02, 0.005), acc_static);
+  }
+  EXPECT_LT(ekf.state().v_NED.norm(), 1e-3)
+      << "对齐后静止速度漂移: v=" << ekf.state().v_NED.transpose();
 }
 
 int main(int argc, char** argv) {

@@ -77,13 +77,16 @@ def read_odom(bag, topic):
 
 def read_diag(bag, topic):
     nis, rej, acc, reset = [], 0, 0, 0
+    tilt = {"acc": 0, "rej": 0}
     last = None
     for _, msg, _ in bag.read_messages(topics=[topic]):
         nis.append(msg.nis_depth)
         last = msg
     if last is not None:
         rej, acc, reset = last.reject_depth, last.accept_depth, last.reset_count
-    return np.array(nis), acc, rej, reset
+        tilt["acc"] = getattr(last, "accept_tilt", 0)
+        tilt["rej"] = getattr(last, "reject_tilt", 0)
+    return np.array(nis), acc, rej, reset, tilt
 
 
 def nearest_align(ref, est):
@@ -173,14 +176,16 @@ def main():
         eval_estimator("robot_localization", gt, read_odom(bag, rl_topic))
 
     if diag_topic in types_topics:
-        nis, acc, rej, reset = read_diag(bag, diag_topic)
+        nis, acc, rej, reset, tilt = read_diag(bag, diag_topic)
         if len(nis):
             in_env = float(np.mean(nis < 3.84))   # χ²(0.95,1)
             print(f"[diagnostics] NIS_depth: N={len(nis)} "
                   f"mean={np.mean(nis):.3f} "
                   f"95%包络合规率={in_env*100:.1f}% "
                   f"({'PASS' if in_env >= 0.90 else 'FAIL'} ≥90%)")
-            print(f"    accept={acc} reject={rej} reset={reset}")
+            print(f"    depth accept={acc} reject={rej} reset={reset}")
+            print(f"    tilt  accept={tilt['acc']} reject={tilt['rej']} "
+                  f"({'活跃' if tilt['acc'] > 0 else '未触发-检查门控/姿态约束'})")
 
     bag.close()
 

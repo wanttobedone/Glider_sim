@@ -47,56 +47,56 @@
         <update_rate>50</update_rate>
         <imu>
           <angular_velocity>
-            <!-- 陀螺仪: stddev=实测值, 零偏~1 deg/s, 零偏稳定性~5 deg/hr -->
+            <!-- 陀螺仪(真实中端 MEMS): stddev=实测白噪声, 零偏~0.1 deg/s, 动态零偏小随机游走 -->
             <x><noise type="gaussian">
               <mean>0.0</mean>
               <stddev>0.00122</stddev>
               <bias_mean>0.0</bias_mean>
-              <bias_stddev>0.017</bias_stddev>
-              <dynamic_bias_stddev>0.00015</dynamic_bias_stddev>
+              <bias_stddev>0.002</bias_stddev>
+              <dynamic_bias_stddev>0.00005</dynamic_bias_stddev>
               <dynamic_bias_correlation_time>300.0</dynamic_bias_correlation_time>
             </noise></x>
             <y><noise type="gaussian">
               <mean>0.0</mean>
               <stddev>0.00122</stddev>
               <bias_mean>0.0</bias_mean>
-              <bias_stddev>0.017</bias_stddev>
-              <dynamic_bias_stddev>0.00015</dynamic_bias_stddev>
+              <bias_stddev>0.002</bias_stddev>
+              <dynamic_bias_stddev>0.00005</dynamic_bias_stddev>
               <dynamic_bias_correlation_time>300.0</dynamic_bias_correlation_time>
             </noise></y>
             <z><noise type="gaussian">
               <mean>0.0</mean>
               <stddev>0.00122</stddev>
               <bias_mean>0.0</bias_mean>
-              <bias_stddev>0.017</bias_stddev>
-              <dynamic_bias_stddev>0.00015</dynamic_bias_stddev>
+              <bias_stddev>0.002</bias_stddev>
+              <dynamic_bias_stddev>0.00005</dynamic_bias_stddev>
               <dynamic_bias_correlation_time>300.0</dynamic_bias_correlation_time>
             </noise></z>
           </angular_velocity>
           <linear_acceleration>
-            <!-- 加速度计: stddev=实测值, 零偏~40 mg, 零偏稳定性~0.5 mg -->
+            <!-- 加速度计(真实中端 MEMS): stddev=实测白噪声, 零偏~5 mg, 动态零偏小随机游走 -->
             <x><noise type="gaussian">
               <mean>0.0</mean>
               <stddev>0.00981</stddev>
               <bias_mean>0.0</bias_mean>
-              <bias_stddev>0.39</bias_stddev>
-              <dynamic_bias_stddev>0.005</dynamic_bias_stddev>
+              <bias_stddev>0.05</bias_stddev>
+              <dynamic_bias_stddev>0.001</dynamic_bias_stddev>
               <dynamic_bias_correlation_time>300.0</dynamic_bias_correlation_time>
             </noise></x>
             <y><noise type="gaussian">
               <mean>0.0</mean>
               <stddev>0.00981</stddev>
               <bias_mean>0.0</bias_mean>
-              <bias_stddev>0.39</bias_stddev>
-              <dynamic_bias_stddev>0.005</dynamic_bias_stddev>
+              <bias_stddev>0.05</bias_stddev>
+              <dynamic_bias_stddev>0.001</dynamic_bias_stddev>
               <dynamic_bias_correlation_time>300.0</dynamic_bias_correlation_time>
             </noise></y>
             <z><noise type="gaussian">
               <mean>0.0</mean>
               <stddev>0.00981</stddev>
               <bias_mean>0.0</bias_mean>
-              <bias_stddev>0.39</bias_stddev>
-              <dynamic_bias_stddev>0.005</dynamic_bias_stddev>
+              <bias_stddev>0.05</bias_stddev>
+              <dynamic_bias_stddev>0.001</dynamic_bias_stddev>
               <dynamic_bias_correlation_time>300.0</dynamic_bias_correlation_time>
             </noise></z>
           </linear_acceleration>

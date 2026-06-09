@@ -77,6 +77,9 @@ struct InitParams {
   // 深度 NIS 门限（默认 χ²(0.99,1)=6.635）
   Scalar nis_gate_depth;
 
+  // accel 找平 NIS 门限（3-DOF，默认 χ²(0.99,3)=11.345）
+  Scalar nis_gate_tilt;
+
   NoiseParams noise;
 
   // 初始协方差对角元
@@ -90,11 +93,13 @@ struct InitParams {
 // EKF 内部诊断信息（wrapper 决定如何序列化、发布）
 struct Diagnostics {
   Scalar last_nis_depth = 0;
+  Scalar last_nis_tilt  = 0;
   Scalar last_nis_mag   = 0;
   Scalar last_nis_gps   = 0;
   Scalar last_nis_dvl   = 0;
 
   uint32_t accept_depth = 0, reject_depth = 0;
+  uint32_t accept_tilt  = 0, reject_tilt  = 0;
   uint32_t accept_mag   = 0, reject_mag   = 0;
   uint32_t accept_gps   = 0, reject_gps   = 0;
   uint32_t accept_dvl   = 0, reject_dvl   = 0;

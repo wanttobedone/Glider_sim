@@ -22,6 +22,10 @@ class Eskf {
 
   // 测量更新（Phase 1+）。返回是否被接受 (false = NIS 拒绝)
   bool updateDepth(Scalar t, Scalar depth_m, Scalar R);
+  // accel 找平：低加速度段用重力方向约束 roll/pitch（yaw 不可观）。
+  // R_tilt 为每轴比力测量方差 (m/s^2)^2，需含残余线加速度的保守膨胀。
+  // 调用方负责运动门控（|‖a‖-g|<ε_a 且 |gyro|<ε_ω）。
+  bool updateAccelTilt(Scalar t, const Vec3& accel_FRD, Scalar R_tilt);
   bool updateMag  (Scalar t, const Vec3& mag_FRD, Scalar R_yaw);     // Phase 2
   bool updateGps  (Scalar t, const Vec2& pNE, const Mat2& R);        // Phase 3
   bool updateDvl  (Scalar t, const Vec3& v_FRD, const Mat3& R);      // Phase 3 (可选)

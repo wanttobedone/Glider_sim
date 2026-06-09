@@ -11,12 +11,21 @@ water_density: 1028.0            # kg/m^3
 # 默认场景 spawn 时 Gazebo ENU yaw=1.5708 对应 NED yaw=0。
 init_yaw_ned_rad: 0.0
 static_align_seconds: 3.0        # 启动静止对齐窗口
-align_gyro_thresh: 0.02          # rad/s，静止样本准入
-align_acc_thresh: 0.2            # m/s^2，|‖a‖-g| 阈值
+# 静止样本准入门槛。注意：IMU 有 ~40mg(0.39 m/s^2) 加计零偏，静止 ‖a‖≈10.05
+# 而非 9.81，故 acc 门槛放宽到 0.6 以免把全部样本拒掉（零偏由 staticAlign 捕获）。
+align_gyro_thresh: 0.05          # rad/s（含 ~1deg/s 陀螺零偏）
+align_acc_thresh: 0.6            # m/s^2，|‖a‖-g| 阈值
 
 # --- 时序 / 门控 ---
 dt_max: 0.1                      # s，超过则跳过该次 predict 并 reset_count++
 nis_gate_depth: 6.635            # χ²(0.99,1)
+
+# --- accel 找平更新 (约束 roll/pitch，b_g/b_a 在线可观) ---
+# 仅在低线加速度段触发：|‖a‖-g|<tilt_gate_acc 且 |gyro|<tilt_gate_gyro
+nis_gate_tilt: 11.345            # χ²(0.99,3)
+tilt_meas_variance: 0.25         # (m/s^2)^2，含残余线加速度的保守膨胀 (σ≈0.5)
+tilt_gate_acc: 0.5               # m/s^2，|‖a‖-g| 运动门控
+tilt_gate_gyro: 0.05             # rad/s，|gyro| 运动门控
 
 # --- 压力计 ---
 depth_meas_variance: 0.01        # m^2 (σ≈0.1 m)

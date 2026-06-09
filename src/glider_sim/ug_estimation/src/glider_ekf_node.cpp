@@ -1,9 +1,9 @@
 /**
  * glider_ekf_node
  *
- * 自研 ESKF (ug_ekf_core) 的 ROS wrapper (Phase 1)。
+ * ESKF (ug_ekf_core) 的 ROS wrapper (Phase 1)
  *
- * 订阅:
+ * 订阅话题：
  *   {ns}/imu      [sensor_msgs/Imu]            50 Hz  — 仅用 ω、a，不读 orientation
  *   {ns}/pressure [sensor_msgs/FluidPressure]  10 Hz  — 换算为深度后做更新
  *
@@ -55,6 +55,12 @@ class GliderEkfNode {
     pnh.param<double>("dt_max", dt_max_, 0.1);
     pnh.param<double>("nis_gate_depth", nis_gate_depth_, 6.635);
     pnh.param<double>("depth_meas_variance", depth_R_, 0.01);
+
+    // accel 找平更新
+    pnh.param<double>("nis_gate_tilt", nis_gate_tilt_, 11.345);   // χ²(0.99,3)
+    pnh.param<double>("tilt_meas_variance", tilt_R_, 0.25);       // (0.5 m/s^2)^2 含残余线加速度
+    pnh.param<double>("tilt_gate_acc", tilt_gate_acc_, 0.5);      // |‖a‖-g| 门控 (m/s^2)
+    pnh.param<double>("tilt_gate_gyro", tilt_gate_gyro_, 0.05);   // |gyro| 门控 (rad/s)
 
     // 压力计杠杆臂 (FRD)。base_link FLU 偏移 (0,0,0.1) → FRD (0,0,-0.1)
     std::vector<double> r_p;
@@ -108,6 +114,7 @@ class GliderEkfNode {
     p.init_yaw_ned_rad = static_cast<Scalar>(init_yaw_ned_rad_);
     p.dt_max = static_cast<Scalar>(dt_max_);
     p.nis_gate_depth = static_cast<Scalar>(nis_gate_depth_);
+    p.nis_gate_tilt = static_cast<Scalar>(nis_gate_tilt_);
     p.noise.sigma_g  = static_cast<Scalar>(sigma_g_);
     p.noise.sigma_a  = static_cast<Scalar>(sigma_a_);
     p.noise.sigma_bg = static_cast<Scalar>(sigma_bg_);
@@ -176,6 +183,15 @@ class GliderEkfNode {
     ekf_.predictImu(t, gyro_FRD, accel_FRD);
     last_gyro_FRD_ = gyro_FRD;
     have_state_ = true;
+
+    // accel 找平：仅在低线加速度段（比力≈重力、角速度小）用重力方向约束 roll/pitch。
+    // 运动门控放在 wrapper（策略层）；core 仅做带 NIS 的更新。
+    const bool acc_quiet  = std::abs(accel_FRD.norm() - static_cast<Scalar>(g_))
+                            < static_cast<Scalar>(tilt_gate_acc_);
+    const bool gyro_quiet = gyro_FRD.norm() < static_cast<Scalar>(tilt_gate_gyro_);
+    if (acc_quiet && gyro_quiet) {
+      ekf_.updateAccelTilt(t, accel_FRD, static_cast<Scalar>(tilt_R_));
+    }
   }
 
   void onPressure(const sensor_msgs::FluidPressure::ConstPtr& msg) {
@@ -268,6 +284,9 @@ class GliderEkfNode {
     msg.nis_depth = static_cast<double>(d.last_nis_depth);
     msg.accept_depth = d.accept_depth;
     msg.reject_depth = d.reject_depth;
+    msg.nis_tilt = static_cast<double>(d.last_nis_tilt);
+    msg.accept_tilt = d.accept_tilt;
+    msg.reject_tilt = d.reject_tilt;
     msg.reset_count = d.reset_count;
     msg.P_trace_pos = static_cast<double>(P.block<3,3>(0,0).trace());
     msg.P_trace_vel = static_cast<double>(P.block<3,3>(3,3).trace());
@@ -300,6 +319,7 @@ class GliderEkfNode {
   // params
   double g_, p_atm_, rho_;
   double init_yaw_ned_rad_, align_seconds_, dt_max_, nis_gate_depth_, depth_R_;
+  double nis_gate_tilt_, tilt_R_, tilt_gate_acc_, tilt_gate_gyro_;
   Vec3 r_pressure_frd_;
   double sigma_g_, sigma_a_, sigma_bg_, sigma_ba_;
   double p0_pos_, p0_vel_, p0_att_, p0_bg_, p0_ba_;
