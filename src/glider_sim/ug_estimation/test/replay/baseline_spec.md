@@ -57,11 +57,46 @@ bash record_baseline.sh 600
 
 ## 已锁定基线
 
-> 注：第一次正式 Phase 1 验证开始前在此追加。
+**锁定基线 (Phase 1/2 回归基准)：**
 
 | 文件 | 时长 | 大小 | md5 |
 |---|---|---|---|
-| _待录制_ | | | |
+| `baseline_zigzag_20260608_175201.bag` | 523 s | 81 MB | `9ed2c00445f6d3a268f9c1fe01d12562` |
+
+### 录制条件
+- 仿真世界 `gazebo_dave_ocean.launch`，namespace `ug_glider`
+- **真实中端 MEMS IMU 参数**（xacro：陀螺 bias_stddev 0.002、加计 0.05，dynamic_bias 已减小）
+- 录制时序：先录 ~10s **静止水平段**（供 staticAlign），再发 `move_base_simple/goal` 触发 zigzag
+- 任务 zigzag：dive_depth=30 m，climb_depth=2 m
+- 起始 sim 时间 12.9 s，时间流单调干净（0 回退）
+
+### Phase 1 验收结果（ug_eskf，headless 单次干净回放）
+| 指标 | 实测 | 阈值 | 结论 |
+|---|---|---|---|
+| depth RMSE | 0.022 m | ≤ 0.05 | PASS |
+| roll RMSE | 0.22° | ≤ 1° | PASS |
+| pitch RMSE | 0.19° | ≤ 1° | PASS |
+| NIS_depth 合规率 | 100% | ≥ 90% | PASS |
+
+### Phase 2 验收结果（+ 磁力计 yaw，同一基线 headless 回放）
+| 指标 | 实测 | 阈值 | 结论 |
+|---|---|---|---|
+| depth RMSE | 0.022 m | ≤ 0.05 | PASS |
+| roll RMSE | 0.18° | ≤ 1° | PASS |
+| pitch RMSE | 0.19° | ≤ 1° | PASS |
+| yaw RMSE | 0.40° | ≤ 2° | PASS |
+| yaw 漂移 | -0.036°/min | 无漂移 | PASS |
+| mag 接受率 | 100% | ≥ 90% | PASS |
+
+> mag yaw 更新只观测 Down 轴（H = e_D^T·R_NB），不破坏 accel 找平对 roll/pitch 的约束。
+> 初始 yaw 由 staticAlign 用静止段 mag 恢复（替代 init_yaw_ned_rad 硬编码）。
+
+> Phase 2 及后续任何 core 改动，必须用本基线回归，保证 depth/roll/pitch 不退化。
+> 评估务必用修复后的 `run_phase1_eval.sh`（含残留进程强清理），避免时间流污染。
+
+### 历史教训
+- 录制必须**先静止后机动**：Phase 1 无姿态绝对观测，靠开头静止段对齐；从下潜中开录会导致初始姿态错几十度而发散。
+- 评估链路若有残留 `rosbag play/record` 进程叠加，会污染输出 bag 时间戳（出现回退/回环），表现为"EKF 发散"假象。务必单次干净回放。
 
 ## 注意事项
 

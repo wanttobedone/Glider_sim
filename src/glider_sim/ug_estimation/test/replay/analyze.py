@@ -78,15 +78,19 @@ def read_odom(bag, topic):
 def read_diag(bag, topic):
     nis, rej, acc, reset = [], 0, 0, 0
     tilt = {"acc": 0, "rej": 0}
+    mag = {"acc": 0, "rej": 0, "nis": []}
     last = None
     for _, msg, _ in bag.read_messages(topics=[topic]):
         nis.append(msg.nis_depth)
+        mag["nis"].append(getattr(msg, "nis_mag", 0.0))
         last = msg
     if last is not None:
         rej, acc, reset = last.reject_depth, last.accept_depth, last.reset_count
         tilt["acc"] = getattr(last, "accept_tilt", 0)
         tilt["rej"] = getattr(last, "reject_tilt", 0)
-    return np.array(nis), acc, rej, reset, tilt
+        mag["acc"] = getattr(last, "accept_mag", 0)
+        mag["rej"] = getattr(last, "reject_mag", 0)
+    return np.array(nis), acc, rej, reset, tilt, mag
 
 
 def nearest_align(ref, est):
@@ -137,6 +141,13 @@ def eval_estimator(name, ref, est, warmup_s=5.0):
     depth_rmse = rmse(ref_a[:, 0], est_a[:, 0])
     roll_rmse = float(np.sqrt(np.mean(wrap_err(est_a[:, 1], ref_a[:, 1])**2)))
     pitch_rmse = float(np.sqrt(np.mean(wrap_err(est_a[:, 2], ref_a[:, 2])**2)))
+    yaw_err = wrap_err(est_a[:, 3], ref_a[:, 3])
+    yaw_rmse = float(np.sqrt(np.mean(yaw_err**2)))
+    # yaw 漂移：用误差的线性趋势斜率 (deg/min) 衡量长期漂移
+    tt = np.arange(len(yaw_err)) * 0.033  # ~30Hz odom 近似
+    yaw_drift = 0.0
+    if len(yaw_err) > 10 and tt[-1] > 1:
+        yaw_drift = float(np.polyfit(tt, np.degrees(yaw_err), 1)[0] * 60.0)  # deg/min
     print(f"[{name}] N={len(ref_a)} (skip {n_skip})")
     print(f"    depth RMSE = {depth_rmse:.4f} m      "
           f"({'PASS' if depth_rmse <= 0.05 else 'FAIL'} ≤0.05)")
@@ -144,6 +155,9 @@ def eval_estimator(name, ref, est, warmup_s=5.0):
           f"({'PASS' if math.degrees(roll_rmse) <= 1.0 else 'FAIL'} ≤1°)")
     print(f"    pitch RMSE = {math.degrees(pitch_rmse):.4f}°    "
           f"({'PASS' if math.degrees(pitch_rmse) <= 1.0 else 'FAIL'} ≤1°)")
+    print(f"    yaw   RMSE = {math.degrees(yaw_rmse):.4f}°    "
+          f"({'PASS' if math.degrees(yaw_rmse) <= 2.0 else 'FAIL'} ≤2°)  "
+          f"漂移={yaw_drift:+.3f}°/min")
 
 
 def main():
@@ -176,7 +190,7 @@ def main():
         eval_estimator("robot_localization", gt, read_odom(bag, rl_topic))
 
     if diag_topic in types_topics:
-        nis, acc, rej, reset, tilt = read_diag(bag, diag_topic)
+        nis, acc, rej, reset, tilt, mag = read_diag(bag, diag_topic)
         if len(nis):
             in_env = float(np.mean(nis < 3.84))   # χ²(0.95,1)
             print(f"[diagnostics] NIS_depth: N={len(nis)} "
@@ -186,6 +200,14 @@ def main():
             print(f"    depth accept={acc} reject={rej} reset={reset}")
             print(f"    tilt  accept={tilt['acc']} reject={tilt['rej']} "
                   f"({'活跃' if tilt['acc'] > 0 else '未触发-检查门控/姿态约束'})")
+            magnis = np.array(mag["nis"])
+            magtot = mag["acc"] + mag["rej"]
+            mag_env = float(np.mean(magnis[magnis > 0] < 3.84)) if np.any(magnis > 0) else 0.0
+            mag_ok_ratio = (mag["acc"] / magtot) if magtot else 0.0
+            print(f"    mag   accept={mag['acc']} reject={mag['rej']} "
+                  f"接受率={mag_ok_ratio*100:.1f}% "
+                  f"({'PASS' if mag_ok_ratio >= 0.90 else 'FAIL'} ≥90%)  "
+                  f"({'活跃' if mag['acc'] > 0 else '未触发'})")
 
     bag.close()
 

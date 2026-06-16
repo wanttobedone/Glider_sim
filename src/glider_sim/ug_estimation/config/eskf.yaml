@@ -27,6 +27,14 @@ tilt_meas_variance: 0.25         # (m/s^2)^2，含残余线加速度的保守膨
 tilt_gate_acc: 0.5               # m/s^2，|‖a‖-g| 运动门控
 tilt_gate_gyro: 0.05             # rad/s，|gyro| 运动门控
 
+# --- 磁力计 yaw 更新 (Phase 2，仅约束 yaw 不动 roll/pitch) ---
+nis_gate_mag: 6.635              # χ²(0.99,1)
+mag_yaw_variance: 0.01           # (rad)^2 ≈ (5.7°)^2
+mag_declination_rad: 0.0         # 磁偏角；仿真 plugin declination_deg=0
+# 硬铁偏置 (FLU, T) 与软铁矩阵 (3x3 row-major)。仿真无干扰 → 0 / 单位阵
+hard_iron_flu: [0.0, 0.0, 0.0]
+soft_iron: [1.0, 0.0, 0.0,  0.0, 1.0, 0.0,  0.0, 0.0, 1.0]
+
 # --- 压力计 ---
 depth_meas_variance: 0.01        # m^2 (σ≈0.1 m)
 # 压力计杠杆臂 (FRD)。base_link FLU 偏移 (0,0,0.1) → FRD (0,0,-0.1)

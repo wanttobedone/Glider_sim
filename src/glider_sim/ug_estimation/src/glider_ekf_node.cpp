@@ -15,7 +15,7 @@
  *   core 内部 NED-FRD；输出转 ENU-FLU 供 state_converter_node 复用。
  *     R_WB'(FLU→ENU) = C · R_NB · D,  C=[[0,1,0],[1,0,0],[0,0,-1]], D=diag(1,-1,-1)
  *
- * 启动流程 (Phase 1):
+ * 启动流程
  *   ALIGNING: 累积 static_align_seconds 秒静止样本 → staticAlign 初始化 roll/pitch/b_g
  *             静止样本不足则回退到 init_yaw_ned_rad + 零 bias。
  *   RUNNING : 正常 predict/update。
@@ -24,10 +24,12 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/FluidPressure.h>
+#include <sensor_msgs/MagneticField.h>
 #include <nav_msgs/Odometry.h>
 #include <ug_msgs/EskfDiagnostics.h>
 
 #include <vector>
+#include <algorithm>
 #include <cmath>
 
 #include "ug_estimation/core/eskf.h"
@@ -62,7 +64,22 @@ class GliderEkfNode {
     pnh.param<double>("tilt_gate_acc", tilt_gate_acc_, 0.5);      // |‖a‖-g| 门控 (m/s^2)
     pnh.param<double>("tilt_gate_gyro", tilt_gate_gyro_, 0.05);   // |gyro| 门控 (rad/s)
 
-    // 压力计杠杆臂 (FRD)。base_link FLU 偏移 (0,0,0.1) → FRD (0,0,-0.1)
+    // 磁力计 yaw 更新
+    pnh.param<double>("nis_gate_mag", nis_gate_mag_, 6.635);      // χ²(0.99,1)
+    pnh.param<double>("mag_yaw_variance", mag_R_yaw_, 0.01);      // (rad)^2 ≈ (5.7°)^2
+    pnh.param<double>("mag_declination_rad", mag_declination_rad_, 0.0);
+    // 硬铁偏置 (FLU, 同 mag 原始单位 T) 与软铁矩阵 (3x3 row-major)
+    std::vector<double> hi, si;
+    pnh.param<std::vector<double>>("hard_iron_flu", hi, {0.0, 0.0, 0.0});
+    pnh.param<std::vector<double>>("soft_iron", si, {1,0,0, 0,1,0, 0,0,1});
+    hard_iron_flu_ = Vec3(static_cast<Scalar>(hi[0]),
+                          static_cast<Scalar>(hi[1]),
+                          static_cast<Scalar>(hi[2]));
+    soft_iron_ << static_cast<Scalar>(si[0]), static_cast<Scalar>(si[1]), static_cast<Scalar>(si[2]),
+                  static_cast<Scalar>(si[3]), static_cast<Scalar>(si[4]), static_cast<Scalar>(si[5]),
+                  static_cast<Scalar>(si[6]), static_cast<Scalar>(si[7]), static_cast<Scalar>(si[8]);
+
+    // 压力计杠杆臂 (FRD) base_link FLU 偏移 (0,0,0.1) → FRD (0,0,-0.1)
     std::vector<double> r_p;
     pnh.param<std::vector<double>>("r_pressure_frd", r_p, {0.0, 0.0, -0.1});
     r_pressure_frd_ = Vec3(static_cast<Scalar>(r_p[0]),
@@ -91,6 +108,7 @@ class GliderEkfNode {
     diag_pub_ = nh.advertise<ug_msgs::EskfDiagnostics>("glider_ekf/diagnostics", 10);
     imu_sub_  = nh.subscribe("imu", 100, &GliderEkfNode::onImu, this);
     pres_sub_ = nh.subscribe("pressure", 20, &GliderEkfNode::onPressure, this);
+    mag_sub_  = nh.subscribe("mag", 100, &GliderEkfNode::onMag, this);
 
     odom_frame_ = pnh.param<std::string>("odom_frame", ns + "/odom");
     base_frame_ = pnh.param<std::string>("base_frame", ns + "/base_link");
@@ -109,12 +127,13 @@ class GliderEkfNode {
   InitParams buildInitParams() const {
     InitParams p{};
     p.g = static_cast<Scalar>(g_);
-    p.mag_declination_rad = 0;
     p.r_pressure_FRD = r_pressure_frd_;
     p.init_yaw_ned_rad = static_cast<Scalar>(init_yaw_ned_rad_);
     p.dt_max = static_cast<Scalar>(dt_max_);
     p.nis_gate_depth = static_cast<Scalar>(nis_gate_depth_);
     p.nis_gate_tilt = static_cast<Scalar>(nis_gate_tilt_);
+    p.nis_gate_mag = static_cast<Scalar>(nis_gate_mag_);
+    p.mag_declination_rad = static_cast<Scalar>(mag_declination_rad_);
     p.noise.sigma_g  = static_cast<Scalar>(sigma_g_);
     p.noise.sigma_a  = static_cast<Scalar>(sigma_a_);
     p.noise.sigma_bg = static_cast<Scalar>(sigma_bg_);
@@ -143,17 +162,29 @@ class GliderEkfNode {
     ekf_.initialize(p, x0, buildP0(p));
 
     if (acc_buf_.size() >= 10) {
-      ekf_.staticAlign(acc_buf_.data(), gyro_buf_.data(),
-                       nullptr, acc_buf_.size());
-      ROS_INFO("[glider_ekf] 静态对齐完成: 用 %zu 个静止样本, b_g=[%.4f %.4f %.4f]",
-               acc_buf_.size(),
-               ekf_.state().b_g.x(), ekf_.state().b_g.y(), ekf_.state().b_g.z());
+      // mag 样本足够则用于 yaw 初始化；否则传 nullptr 回退 init_yaw_ned_rad
+      const Vec3* mag_ptr = nullptr;
+      std::size_t n = acc_buf_.size();
+      if (mag_buf_.size() >= 10) {
+        mag_ptr = mag_buf_.data();
+        n = std::min(acc_buf_.size(), mag_buf_.size());
+      }
+      ekf_.staticAlign(acc_buf_.data(), gyro_buf_.data(), mag_ptr, n);
+      const Scalar yaw0 = std::atan2(
+          ekf_.state().q_NB.toRotationMatrix()(1,0),
+          ekf_.state().q_NB.toRotationMatrix()(0,0));
+      ROS_INFO("[glider_ekf] 静态对齐完成: %zu acc / %zu mag 样本, "
+               "yaw0=%.3f rad(%s), b_g=[%.4f %.4f %.4f]",
+               acc_buf_.size(), mag_buf_.size(), yaw0,
+               mag_ptr ? "mag" : "先验", ekf_.state().b_g.x(),
+               ekf_.state().b_g.y(), ekf_.state().b_g.z());
     } else {
       ROS_WARN("[glider_ekf] 静止样本不足(%zu)，回退: yaw=%.3f 零 bias",
                acc_buf_.size(), init_yaw_ned_rad_);
     }
     acc_buf_.clear();
     gyro_buf_.clear();
+    mag_buf_.clear();
     phase_ = Phase::RUNNING;
   }
 
@@ -162,6 +193,7 @@ class GliderEkfNode {
     const Vec3 gyro_FRD  = ug_ekf::ros_adapter::GyroFrdFromImu(*msg);
     const Vec3 accel_FRD = ug_ekf::ros_adapter::AccelFrdFromImu(*msg);
 
+     //时间戳计算
     if (phase_ == Phase::ALIGNING) {
       if (align_t0_ < 0) align_t0_ = t;
 
@@ -184,8 +216,8 @@ class GliderEkfNode {
     last_gyro_FRD_ = gyro_FRD;
     have_state_ = true;
 
-    // accel 找平：仅在低线加速度段（比力≈重力、角速度小）用重力方向约束 roll/pitch。
-    // 运动门控放在 wrapper（策略层）；core 仅做带 NIS 的更新。
+    // accel 找平，仅在低线加速度段（比力≈重力、角速度小）用重力方向约束 roll/pitch。
+    // 运动门控放在 wrapper（策略层）；core 仅做带 NIS 的更新
     const bool acc_quiet  = std::abs(accel_FRD.norm() - static_cast<Scalar>(g_))
                             < static_cast<Scalar>(tilt_gate_acc_);
     const bool gyro_quiet = gyro_FRD.norm() < static_cast<Scalar>(tilt_gate_gyro_);
@@ -201,6 +233,19 @@ class GliderEkfNode {
         *msg, static_cast<Scalar>(p_atm_), static_cast<Scalar>(rho_),
         static_cast<Scalar>(g_));
     ekf_.updateDepth(t, depth, static_cast<Scalar>(depth_R_));
+  }
+
+  void onMag(const sensor_msgs::MagneticField::ConstPtr& msg) {
+    const Vec3 mag_FRD = ug_ekf::ros_adapter::MagFrdFromMsg(
+        *msg, hard_iron_flu_, soft_iron_);
+    if (phase_ == Phase::ALIGNING) {
+      // 累积静止段 mag，供 staticAlign 初始化 yaw
+      mag_buf_.push_back(mag_FRD);
+      return;
+    }
+    const Scalar t = static_cast<Scalar>(msg->header.stamp.toSec());
+    // mag 测的是场方向，不依赖加速度；仅靠 NIS gate 拒野值
+    ekf_.updateMag(t, mag_FRD, static_cast<Scalar>(mag_R_yaw_));
   }
 
   void onPublishTimer(const ros::TimerEvent&) {
@@ -287,6 +332,9 @@ class GliderEkfNode {
     msg.nis_tilt = static_cast<double>(d.last_nis_tilt);
     msg.accept_tilt = d.accept_tilt;
     msg.reject_tilt = d.reject_tilt;
+    msg.nis_mag = static_cast<double>(d.last_nis_mag);
+    msg.accept_mag = d.accept_mag;
+    msg.reject_mag = d.reject_mag;
     msg.reset_count = d.reset_count;
     msg.P_trace_pos = static_cast<double>(P.block<3,3>(0,0).trace());
     msg.P_trace_vel = static_cast<double>(P.block<3,3>(3,3).trace());
@@ -301,7 +349,7 @@ class GliderEkfNode {
   }
 
   // ROS
-  ros::Subscriber imu_sub_, pres_sub_;
+  ros::Subscriber imu_sub_, pres_sub_, mag_sub_;
   ros::Publisher  odom_pub_, diag_pub_;
   ros::Timer      pub_timer_;
   std::string odom_frame_, base_frame_;
@@ -315,11 +363,15 @@ class GliderEkfNode {
 
   std::vector<Vec3> acc_buf_;
   std::vector<Vec3> gyro_buf_;
+  std::vector<Vec3> mag_buf_;
 
   // params
   double g_, p_atm_, rho_;
   double init_yaw_ned_rad_, align_seconds_, dt_max_, nis_gate_depth_, depth_R_;
   double nis_gate_tilt_, tilt_R_, tilt_gate_acc_, tilt_gate_gyro_;
+  double nis_gate_mag_, mag_R_yaw_, mag_declination_rad_;
+  Vec3 hard_iron_flu_;
+  Mat3 soft_iron_;
   Vec3 r_pressure_frd_;
   double sigma_g_, sigma_a_, sigma_bg_, sigma_ba_;
   double p0_pos_, p0_vel_, p0_att_, p0_bg_, p0_ba_;

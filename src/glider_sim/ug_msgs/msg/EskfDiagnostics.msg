@@ -17,6 +17,11 @@ float64 nis_tilt        # 最近一次找平更新的 NIS
 uint32 accept_tilt      # 累计接受次数
 uint32 reject_tilt      # 累计 NIS 拒绝次数
 
+# 磁力计 yaw 更新统计 (约束 yaw)
+float64 nis_mag         # 最近一次 mag 更新的 NIS
+uint32 accept_mag       # 累计接受次数
+uint32 reject_mag       # 累计 NIS 拒绝次数
+
 # 跳帧/复位计数 (dt 超限触发)
 uint32 reset_count
 

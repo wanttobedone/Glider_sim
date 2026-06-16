@@ -25,6 +25,7 @@ using Vec2 = Eigen::Matrix<Scalar, 2, 1>;
 using Vec3 = Eigen::Matrix<Scalar, 3, 1>;
 using Vec4 = Eigen::Matrix<Scalar, 4, 1>;
 using Vec15 = Eigen::Matrix<Scalar, 15, 1>;
+using RowVec15 = Eigen::Matrix<Scalar, 1, 15>;   // 标量量测 H 行向量
 
 using Mat2 = Eigen::Matrix<Scalar, 2, 2>;
 using Mat3 = Eigen::Matrix<Scalar, 3, 3>;
@@ -79,6 +80,9 @@ struct InitParams {
 
   // accel 找平 NIS 门限（3-DOF，默认 χ²(0.99,3)=11.345）
   Scalar nis_gate_tilt;
+
+  // mag yaw NIS 门限（1-DOF，默认 χ²(0.99,1)=6.635）
+  Scalar nis_gate_mag;
 
   NoiseParams noise;
 

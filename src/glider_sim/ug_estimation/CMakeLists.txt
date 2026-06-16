@@ -40,6 +40,7 @@ catkin_package(
 # ============================================================================
 add_library(ug_ekf_core STATIC
   src/core/eskf.cpp
+  src/embedded/ug_ekf_glider.cpp   # STM32 C wrapper（host 也编译，作纯净性/接口检查）
 )
 target_include_directories(ug_ekf_core PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -94,5 +95,10 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(test_accel_tilt test/test_accel_tilt.cpp)
   if(TARGET test_accel_tilt)
     target_link_libraries(test_accel_tilt ug_ekf_core)
+  endif()
+
+  catkin_add_gtest(test_mag_update test/test_mag_update.cpp)
+  if(TARGET test_mag_update)
+    target_link_libraries(test_mag_update ug_ekf_core)
   endif()
 endif()

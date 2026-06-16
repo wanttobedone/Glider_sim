@@ -17,7 +17,7 @@
   <arg name="dashboard" default="false"/>
   <arg name="control" default="true"/>  <!-- 手动调试时默认关闭，用 control:=true 启用 -->
   <arg name="estimation" default="true"/>  <!-- 状态估计层 (EKF) -->
-  <arg name="estimator" default="robot_localization"/> <!-- robot_localization | ug_eskf -->
+  <arg name="estimator" default="ug_eskf"/> <!-- robot_localization | ug_eskf -->
   <arg name="init_yaw_ned_rad" default="0.0"/> <!-- 自研 ESKF 的 NED 初始航向 -->
   <arg name="use_ground_truth" default="false"/> <!-- true 时 state_converter 直接用真值 -->
   <!-- 自研 ESKF 时 state_converter 改订阅其输出；baseline 时留空走默认 -->

@@ -17,6 +17,7 @@
 
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/FluidPressure.h>
+#include <sensor_msgs/MagneticField.h>
 #include "ug_estimation/core/types.h"
 
 namespace ug_ekf {
@@ -49,6 +50,20 @@ inline Scalar DepthFromPressure(const sensor_msgs::FluidPressure& msg,
                                 Scalar p_atm, Scalar rho, Scalar g) {
   return static_cast<Scalar>(
       (msg.fluid_pressure - p_atm) / (rho * g));
+}
+
+// 磁力计 FLU → FRD + 硬铁/软铁补偿（标定层放 wrapper，core 只吃校正后向量）。
+//   m_cal_FLU = W · (m_raw_FLU - V)      W=软铁(3x3 row-major), V=硬铁偏置
+//   m_FRD     = diag(1,-1,-1) · m_cal_FLU
+// W 单位阵 + V=0 时退化为纯轴翻转。
+inline Vec3 MagFrdFromMsg(const sensor_msgs::MagneticField& msg,
+                          const Vec3& hard_iron_FLU,
+                          const Mat3& soft_iron) {
+  const Vec3 m_raw(static_cast<Scalar>(msg.magnetic_field.x),
+                   static_cast<Scalar>(msg.magnetic_field.y),
+                   static_cast<Scalar>(msg.magnetic_field.z));
+  const Vec3 m_cal = soft_iron * (m_raw - hard_iron_FLU);
+  return FluToFrd(m_cal.x(), m_cal.y(), m_cal.z());
 }
 
 }  // namespace ros_adapter

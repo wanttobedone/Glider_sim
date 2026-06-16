@@ -8,6 +8,7 @@
 #include "ug_estimation/core/imu_propagator.h"
 #include "ug_estimation/core/measurements/depth.h"
 #include "ug_estimation/core/measurements/accel_tilt.h"
+#include "ug_estimation/core/measurements/mag.h"
 
 #include <cmath>
 
@@ -58,7 +59,7 @@ void Eskf::predictImu(Scalar t, const Vec3& gyro_FRD, const Vec3& accel_FRD) {
   // 2) 名义传播
   PropagateNominal(x_, gyro_FRD, accel_FRD, params_.g, dt);
 
-  // 3) 协方差传播 P = F P F^T + Q
+  // 3) 协方差传播 P = F P F^T + Q，动力学传播
   P_ = F * P_ * F.transpose() + Q;
   enforceSymmetry();
 
@@ -99,7 +100,7 @@ bool Eskf::updateDepth(Scalar t, Scalar depth_m, Scalar R) {
   const Vec15 dx = K * y;
   injectErrorState(dx);
 
-  // Joseph form: P = (I - K H) P (I - K H)^T + K R K^T
+  // Joseph form: P = (I - K H) P (I - K H)^T + K R K^T，预测更新协方差
   const Mat15 I15 = Mat15::Identity();
   const Mat15 IKH = I15 - K * H;
   P_ = IKH * P_ * IKH.transpose() + K * R * K.transpose();
@@ -149,9 +150,33 @@ bool Eskf::updateAccelTilt(Scalar /*t*/, const Vec3& accel_FRD, Scalar R_tilt) {
   return true;
 }
 
-bool Eskf::updateMag(Scalar /*t*/, const Vec3& /*mag_FRD*/, Scalar /*R_yaw*/) {
-  // TODO Phase 2
-  return false;
+bool Eskf::updateMag(Scalar /*t*/, const Vec3& mag_FRD, Scalar R_yaw) {
+  if (!initialized_) return false;
+  if (mag_FRD.norm() < Scalar(1e-12)) { diag_.reject_mag++; return false; }
+
+  RowVec15 H;
+  BuildMagYawH(x_, H);
+
+  const Scalar y = MagYawInnovation(x_, mag_FRD, params_.mag_declination_rad);
+
+  // S = H P H^T + R (标量)
+  const Scalar S = (H * P_ * H.transpose())(0, 0) + R_yaw;
+  if (S <= Scalar(0)) { diag_.reject_mag++; return false; }
+
+  const Scalar nis = y * y / S;
+  diag_.last_nis_mag = nis;
+  if (nis > params_.nis_gate_mag) { diag_.reject_mag++; return false; }
+
+  const Eigen::Matrix<Scalar, 15, 1> K = (P_ * H.transpose()) / S;
+  injectErrorState(K * y);
+
+  const Mat15 I15 = Mat15::Identity();
+  const Mat15 IKH = I15 - K * H;
+  P_ = IKH * P_ * IKH.transpose() + K * R_yaw * K.transpose();
+  enforceSymmetry();
+
+  diag_.accept_mag++;
+  return true;
 }
 
 bool Eskf::updateGps(Scalar /*t*/, const Vec2& /*pNE*/, const Mat2& /*R*/) {
@@ -164,11 +189,11 @@ bool Eskf::updateDvl(Scalar /*t*/, const Vec3& /*v_FRD*/, const Mat3& /*R*/) {
   return false;
 }
 
-// 静态对齐（方案 A：水平部署假设捕获 b_a）。
+// 静态对齐，水平部署假设捕获 b_a
 //
 // 背景：MEMS 加速度计有 ~40mg 常值零偏，单测静止 accel 无法把"零偏"和"倾角"
 //   分开。Phase 1 深度更新下水平 b_a 不可观，若按 accel→tilt 反推姿态会把
-//   零偏误当成 ~2.3° 倾角，顶穿 roll/pitch≤1° 阈值。
+//   零偏误当成 ~2.3° 倾角， roll/pitch≤1° 阈值
 //
 // 真机标准做法（放平标定）：入水/部署时滑翔机近似水平，于是
 //   - 姿态：roll=pitch=0，yaw=先验 init_yaw_ned_rad
@@ -177,36 +202,50 @@ bool Eskf::updateDvl(Scalar /*t*/, const Vec3& /*v_FRD*/, const Mat3& /*R*/) {
 //     ⇒ b_a = a_mean - [0,0,-g] = a_mean + [0,0,+g]
 //   - 陀螺零偏：b_g = mean(gyro)（静止真角速度=0）
 //
-// 代价：若部署时真有安装倾角，会被误记进 b_a；对水平部署的滑翔机可接受
+// 代价若部署时真有安装倾角，会被误记进 b_a；对水平部署的滑翔机可接受
 //   （本仿真 ground_truth 静止姿态 roll=0/pitch=-0.48°，残差<0.5°）。
 //   后续如需建模安装角，可加 init_roll/init_pitch 先验参数扣除。
 //
 // 准入条件由 wrapper 端筛样本，core 假设 caller 已确保静止。
 void Eskf::staticAlign(const Vec3* acc_buf, const Vec3* gyro_buf,
-                       const Vec3* /*mag_buf*/, std::size_t n) {
+                       const Vec3* mag_buf, std::size_t n) {
   if (!initialized_ || n == 0) return;
 
   Vec3 a_sum = Vec3::Zero();
   Vec3 g_sum = Vec3::Zero();
+  Vec3 m_sum = Vec3::Zero();
   for (std::size_t i = 0; i < n; ++i) {
     a_sum += acc_buf[i];
     g_sum += gyro_buf[i];
+    if (mag_buf) m_sum += mag_buf[i];
   }
   const Scalar inv_n = Scalar(1) / static_cast<Scalar>(n);
   const Vec3 a_mean = a_sum * inv_n;
   const Vec3 g_mean = g_sum * inv_n;
+  const Vec3 m_mean = m_sum * inv_n;
+  staticAlignFromMeans(a_mean, g_mean, mag_buf ? &m_mean : nullptr);
+}
 
-  // 姿态：水平 + 先验 yaw（仅绕 Down 轴）
-  const Scalar yaw = params_.init_yaw_ned_rad;
+void Eskf::staticAlignFromMeans(const Vec3& acc_mean, const Vec3& gyro_mean,
+                                const Vec3* mag_mean) {
+  if (!initialized_) return;
+
+  // yaw，有 mag 则用 level 假设从磁场恢复，否则回退先验 init_yaw_ned_rad
+  Scalar yaw = params_.init_yaw_ned_rad;
+  if (mag_mean && mag_mean->norm() > Scalar(1e-12)) {
+    yaw = MagInitYaw(*mag_mean, params_.mag_declination_rad);
+  }
+
+  // 姿态：水平 + yaw（仅绕 Down 轴）
   x_.q_NB = Eigen::AngleAxis<Scalar>(yaw, Vec3::UnitZ());
   x_.q_NB.normalize();
 
   // 陀螺零偏 = 静止角速度均值
-  x_.b_g = g_mean;
+  x_.b_g = gyro_mean;
 
   // 加计零偏 = a_mean - [0,0,-g]（水平静止下的期望比力为 [0,0,-g]_FRD）
   const Vec3 expected_specific_force(Scalar(0), Scalar(0), -params_.g);
-  x_.b_a = a_mean - expected_specific_force;
+  x_.b_a = acc_mean - expected_specific_force;
 }
 
 bool Eskf::injectErrorState(const Vec15& dx) {

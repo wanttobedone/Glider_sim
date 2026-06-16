@@ -3,7 +3,7 @@
 // ESKF IMU 名义传播 + 误差状态离散 F/Q 矩阵。
 // 平台无关；Eigen 定长；无堆分配；无 ROS；无异常。
 //
-// === 重力符号约定（关键，禁止修改） ===
+//   重力符号约定（禁止修改）  
 // NED 下 g_NED = [0,0,+g]^T。加速度计 (FRD 系) 测的是 specific force，
 // 静止 + body 对齐 NED 时输出 a_B ≈ [0,0,-g]^T （指向 -Down = Up）。
 // 因此 v_NED 传播：
@@ -16,11 +16,11 @@
 // 若误写减号，静止时 dv/dt = -2g，速度会以 ≈ -2g 系统漂移；
 // test_imu_propagator.cpp 必须覆盖此场景。
 //
-// === 误差状态约定 ===
+//   误差状态约定  
 //   δx = [δp(3), δv(3), δθ(3), δb_g(3), δb_a(3)]   维度 15
 //   δθ 表示 q_true = q_nom ⊗ ExpQ(δθ)，注入时 InjectDeltaTheta
 //
-// === 离散 F 矩阵（一阶 Euler，足够 50Hz IMU） ===
+//   离散 F 矩阵（一阶 Euler，足够 50Hz IMU）  
 //   I3 = 3x3 单位阵; R = R_NB(q_nom); â = a_B - b_a; ω̂ = ω_B - b_g
 //   分块（行 = 状态导数，列 = 误差源）:
 //     δp:   δp' = δp + δv·dt
@@ -29,7 +29,7 @@
 //     δb_g: δb_g' = δb_g
 //     δb_a: δb_a' = δb_a
 //
-// === Q 矩阵（连续噪声密度离散化，对角块） ===
+//   Q 矩阵（连续噪声密度离散化，对角块）  
 //   Q_v (=R·diag(σ_a²)·R^T · dt)
 //   Q_θ (= diag(σ_g²) · dt)
 //   Q_bg(= diag(σ_bg²)· dt)
@@ -70,7 +70,7 @@ inline void PropagateNominal(State& x,
 }
 
 // 构造离散 F 矩阵（15x15）和 Q 矩阵（15x15）。
-// 输入：
+// 输入
 //   x_pre  — 传播前名义状态（用其 q、b_g、b_a 计算雅可比线性化点）
 //   gyro_B, acc_B — 原始 IMU 输入（未减 bias）
 //   noise  — 连续时间噪声密度

@@ -44,6 +44,7 @@ class ESKF:
         s.bg=np.zeros(3); s.ba=np.zeros(3)
         s.P=np.zeros((15,15)); s.par=p; s.tprev=None
         s.acc_depth=0; s.rej_depth=0; s.acc_tilt=0; s.rej_tilt=0; s.reset=0
+        s.acc_mag=0; s.rej_mag=0
 
     def setP0(s):
         d=np.zeros(15)
@@ -51,9 +52,13 @@ class ESKF:
         d[9:12]=s.par['p0_bg']; d[12:15]=s.par['p0_ba']
         s.P=np.diag(d)
 
-    def static_align(s, accs, gyros):
+    def static_align(s, accs, gyros, mags=None):
         am=np.mean(accs,axis=0); gm=np.mean(gyros,axis=0)
         yaw=s.par['init_yaw']
+        if mags is not None and len(mags):
+            mm=np.mean(mags,axis=0)
+            if np.linalg.norm(mm)>1e-12:
+                yaw=s.par['decl']+math.atan2(-mm[1],mm[0])
         s.q=qnorm(np.array([0,0,math.sin(yaw/2),math.cos(yaw/2)]))
         s.bg=gm.copy()
         s.ba=am-np.array([0,0,-s.par['g']])
@@ -126,6 +131,27 @@ class ESKF:
         s.P=IKH@s.P@IKH.T+(K*R_t)@K.T
         s.P=0.5*(s.P+s.P.T); s.acc_tilt+=1
 
+    def update_mag(s,mag,R_y):
+        if np.linalg.norm(mag)<1e-12: s.rej_mag+=1; return
+        Rm=R_of(s.q)
+        mw=Rm@mag
+        decl=s.par['decl']
+        def wrap(a):
+            while a>math.pi: a-=2*math.pi
+            while a<-math.pi: a+=2*math.pi
+            return a
+        y=wrap(decl-math.atan2(mw[1],mw[0]))
+        H=np.zeros((1,15)); H[0,6:9]=Rm[2,:]
+        S=(H@s.P@H.T)[0,0]+R_y
+        if S<=0: s.rej_mag+=1; return
+        nis=y*y/S
+        if nis>s.par['nis_mag']: s.rej_mag+=1; return
+        K=(s.P@H.T/S).reshape(15)
+        s.inject(K*y)
+        I=np.eye(15); IKH=I-np.outer(K,H.reshape(15))
+        s.P=IKH@s.P@IKH.T+np.outer(K,K)*R_y
+        s.P=0.5*(s.P+s.P.T); s.acc_mag+=1
+
 def ned_rp(q):
     R=R_of(q)
     pitch=math.asin(max(-1,min(1,-R[2,0])))
@@ -142,72 +168,83 @@ def main():
     ap.add_argument('--sigma-bg',type=float,default=1e-5)
     args=ap.parse_args()
 
-    par=dict(g=G,dt_max=0.1,nis_depth=6.635,nis_tilt=11.345,
-             init_yaw=0.0,r_p=np.array([0,0,-0.1]),
+    par=dict(g=G,dt_max=0.1,nis_depth=6.635,nis_tilt=11.345,nis_mag=6.635,
+             init_yaw=0.0,decl=0.0,r_p=np.array([0,0,-0.1]),
              p0_pos=100.,p0_vel=0.01,p0_att=0.01,p0_bg=args.p0_bg,p0_ba=1e-3,
              noise=dict(g=1e-3,a=1e-2,bg=args.sigma_bg,ba=1e-4))
-    R_depth=0.01; R_tilt=0.25
+    R_depth=0.01; R_tilt=0.25; R_mag=0.01
 
     b=rosbag.Bag(args.bag)
-    # 读 GT (NED pitch) + IMU + pressure，按时间排序统一处理
     msgs=[]
     Rwn=np.array([[0,1,0],[1,0,0],[0,0,-1.0]]); Tb=np.diag([1,-1,-1.0])
-    gt=[]
-    for topic,m,_ in b.read_messages(topics=['/ug_glider/imu','/ug_glider/pressure','/ug_glider/ground_truth/pose']):
+    gt=[]  # (t, pitch_deg, depth, yaw_deg)
+    def ned_rpy_gt(o):
+        R=Rwn@R_of([o.x,o.y,o.z,o.w])@Tb
+        pit=math.degrees(math.asin(max(-1,min(1,-R[2,0]))))
+        yaw=math.degrees(math.atan2(R[1,0],R[0,0]))
+        return pit,yaw
+    for topic,m,_ in b.read_messages(topics=['/ug_glider/imu','/ug_glider/pressure',
+                                             '/ug_glider/mag','/ug_glider/ground_truth/pose']):
         t=m.header.stamp.to_sec()
         if topic=='/ug_glider/imu':
             g=D@np.array([m.angular_velocity.x,m.angular_velocity.y,m.angular_velocity.z])
             a=D@np.array([m.linear_acceleration.x,m.linear_acceleration.y,m.linear_acceleration.z])
             msgs.append((t,'imu',g,a))
         elif topic=='/ug_glider/pressure':
-            depth=(m.fluid_pressure-101325.0)/(1028.0*G)
-            msgs.append((t,'pre',depth,None))
+            msgs.append((t,'pre',(m.fluid_pressure-101325.0)/(1028.0*G),None))
+        elif topic=='/ug_glider/mag':
+            mg=D@np.array([m.magnetic_field.x,m.magnetic_field.y,m.magnetic_field.z])
+            msgs.append((t,'mag',mg,None))
         else:
-            o=m.pose.pose.orientation
-            R=Rwn@R_of([o.x,o.y,o.z,o.w])@Tb
-            gt.append((t,math.degrees(math.asin(max(-1,min(1,-R[2,0])))),-m.pose.pose.position.z))
+            pit,yaw=ned_rpy_gt(m.pose.pose.orientation)
+            gt.append((t,pit,-m.pose.pose.position.z,yaw))
     b.close()
     msgs.sort(key=lambda x:x[0])
     gtt=np.array([x[0] for x in gt])
 
+    def wrapdeg(a):
+        return (a+180)%360-180
+
     ekf=ESKF(par); ekf.setP0()
-    aligned=False; t0=msgs[0][0]; accbuf=[]; gybuf=[]
-    pitch_err=[]; depth_err=[]; samples=[]
+    aligned=False; t0=msgs[0][0]; accbuf=[]; gybuf=[]; magbuf=[]
+    pitch_err=[]; depth_err=[]; yaw_err=[]; samples=[]
     for t,typ,d1,d2 in msgs:
         if not aligned:
-            if typ=='imu':
-                accbuf.append(d1*0+d2); gybuf.append(d1)  # d2=acc,d1=gyro
-                if t-t0>=args.align_sec:
-                    ekf.static_align(np.array(accbuf),np.array(gybuf))
-                    ekf.tprev=t; aligned=True
+            if typ=='imu': accbuf.append(d2); gybuf.append(d1)
+            elif typ=='mag': magbuf.append(d1)
+            if typ=='imu' and t-t0>=args.align_sec:
+                ekf.static_align(np.array(accbuf),np.array(gybuf),
+                                 np.array(magbuf) if magbuf else None)
+                ekf.tprev=t; aligned=True
             continue
         if typ=='imu':
             gyro,acc=d1,d2
             ekf.predict(t,gyro,acc)
-            acc_ok=abs(np.linalg.norm(acc)-G)<args.tilt_acc_gate
-            gyro_ok=np.linalg.norm(gyro)<args.tilt_gyro_gate
-            if acc_ok and gyro_ok:
+            if abs(np.linalg.norm(acc)-G)<args.tilt_acc_gate and np.linalg.norm(gyro)<args.tilt_gyro_gate:
                 ekf.update_tilt(acc,R_tilt)
-            # 记录
             i=np.argmin(np.abs(gtt-t))
             if abs(gtt[i]-t)<0.1:
-                r,p=ned_rp(ekf.q)
+                r,p=ned_rp(ekf.q); R=R_of(ekf.q)
+                yaw=math.degrees(math.atan2(R[1,0],R[0,0]))
                 pitch_err.append(p-gt[i][1])
                 depth_err.append(ekf.p[2]-gt[i][2])
-                samples.append((t-t0,gt[i][1],p,ekf.p[2],gt[i][2],ekf.bg[1]))
+                yaw_err.append(wrapdeg(yaw-gt[i][3]))
+                samples.append((t-t0,gt[i][3],yaw,gt[i][1],p))
         elif typ=='pre':
             ekf.update_depth(d1,R_depth)
+        elif typ=='mag':
+            ekf.update_mag(d1,R_mag)
 
-    pe=np.array(pitch_err); de=np.array(depth_err)
-    # 跳过前10s warmup
-    print("门控 gyro<%.2f acc<%.2f | tilt accept=%d reject=%d depth acc=%d rej=%d"%(
-        args.tilt_gyro_gate,args.tilt_acc_gate,ekf.acc_tilt,ekf.rej_tilt,ekf.acc_depth,ekf.rej_depth))
-    print("  pitch RMSE=%.2f°  depth RMSE=%.3fm  b_g.y_final=%.4f rad/s(%.2f°/s)"%(
-        math.sqrt(np.mean(pe**2)), math.sqrt(np.mean(de**2)), ekf.bg[1], math.degrees(ekf.bg[1])))
-    print("  时序抽样 (rel, GTpit, ESpit, ESdep, GTdep, b_g.y):")
-    for k in range(0,len(samples),max(1,len(samples)//12)):
+    pe=np.array(pitch_err); de=np.array(depth_err); ye=np.array(yaw_err)
+    print("tilt acc=%d rej=%d | depth acc=%d rej=%d | mag acc=%d rej=%d"%(
+        ekf.acc_tilt,ekf.rej_tilt,ekf.acc_depth,ekf.rej_depth,ekf.acc_mag,ekf.rej_mag))
+    print("  pitch RMSE=%.2f°  depth RMSE=%.3fm  yaw RMSE=%.2f°  b_g.y=%.4f rad/s(%.2f°/s)"%(
+        math.sqrt(np.mean(pe**2)), math.sqrt(np.mean(de**2)), math.sqrt(np.mean(ye**2)),
+        ekf.bg[1], math.degrees(ekf.bg[1])))
+    print("  yaw 时序 (rel, GTyaw, ESyaw, GTpit, ESpit):")
+    for k in range(0,len(samples),max(1,len(samples)//10)):
         s=samples[k]
-        print("   %5.0f  %6.1f %6.1f  %6.1f %6.1f  %+.4f"%(s[0],s[1],s[2],s[3],s[4],s[5]))
+        print("   %5.0f  %7.1f %7.1f  %6.1f %6.1f"%(s[0],s[1],s[2],s[3],s[4]))
 
 if __name__=='__main__':
     main()

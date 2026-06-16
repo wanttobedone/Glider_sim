@@ -20,8 +20,7 @@
 
 namespace ug_ekf {
 
-// 行向量类型 (1x15)，与误差状态对齐
-using RowVec15 = Eigen::Matrix<Scalar, 1, 15>;
+// RowVec15 (1x15 H 行向量) 定义在 types.h
 
 // 计算预测深度 z_pred = e_D^T · (p_NED + R_NB · r_p)
 inline Scalar PredictDepth(const State& x, const Vec3& r_pressure_FRD) {

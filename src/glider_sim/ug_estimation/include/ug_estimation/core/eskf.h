@@ -35,6 +35,12 @@ class Eskf {
   void staticAlign(const Vec3* acc_buf, const Vec3* gyro_buf,
                    const Vec3* mag_buf, std::size_t n);
 
+  // 静态对齐（增量版，O(1) RAM）：直接传静止段均值。
+  // mag_mean 为 nullptr 时 yaw 回退 init_yaw_ned_rad。
+  // 嵌入式 wrapper 用累加和/计数即可，无需缓存全部样本。
+  void staticAlignFromMeans(const Vec3& acc_mean, const Vec3& gyro_mean,
+                            const Vec3* mag_mean);
+
   // 访问器
   const State&        state()       const { return x_; }
   const Mat15&        covariance()  const { return P_; }
