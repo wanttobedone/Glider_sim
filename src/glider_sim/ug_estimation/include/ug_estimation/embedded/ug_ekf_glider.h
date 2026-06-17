@@ -5,10 +5,10 @@
  * 内部封装 ug_ekf::Eskf。无堆分配、无异常、无 iostream。
  *
  * 数据流（与仿真 ROS wrapper 等价，只喂 raw 量，core 自算 dt 做 align/predict/update）：
- *   板载 IMU_Core_GetRawData() ──→ UgEkf_PushImu(gyro, accel, t_us)
- *   板载 mag (同 IMU 帧)        ──→ UgEkf_PushMag(mag, t_us)
- *   板载 pressure_bar           ──→ UgEkf_PushPressureBar(bar, t_us)
- *   周期读取                     ──→ UgEkf_GetOutput(&out)
+ *   板载 IMU_Core_GetRawData() → UgEkf_PushImu(gyro, accel, t_us)
+ *   板载 mag (同 IMU 帧)       → UgEkf_PushMag(mag, t_us)
+ *   板载 pressure_bar          → UgEkf_PushPressureBar(bar, t_us)
+ *   周期读取                    → UgEkf_GetOutput(&out)
  *
  * 坐标系：core 内部 NED-FRD。板载 IMU 模块自身轴系经 cfg.mount_R 旋到 body-FRD：
  *   v_FRD = mount_R * v_module   (mount_R 行主序 3x3，由安装标定确定)
@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-/* 配置。所有量纲见上。任意字段填 0 时用内部默认（见 .cpp）。 */
+/* 配置，所有量纲见上。任意字段填 0 时用内部默认（见 .cpp）。 */
 typedef struct {
   float gravity;            /* m/s^2，默认 9.81 */
   float p_atm_pa;           /* 大气压 Pa，默认 101325 */

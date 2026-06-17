@@ -1,7 +1,7 @@
 /**
  * glider_ekf_node
  *
- * ESKF (ug_ekf_core) 的 ROS wrapper (Phase 1)
+ * ESKF (ug_ekf_core) 的 ROS wrapper 
  *
  * 订阅话题：
  *   {ns}/imu      [sensor_msgs/Imu]            50 Hz  — 仅用 ω、a，不读 orientation

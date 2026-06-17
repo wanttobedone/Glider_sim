@@ -45,7 +45,7 @@
               command="load" ns="hardware_sim"/>
   </group>
 
-  <!-- 状态估计层: baseline (robot_localization) 或自研 ESKF -->
+  <!-- 状态估计层: baseline (robot_localization) 或ESKF -->
   <include if="$(arg estimation)"
            file="$(find ug_estimation)/launch/estimation.launch">
     <arg name="namespace" value="$(arg namespace)"/>

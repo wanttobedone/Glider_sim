@@ -109,7 +109,7 @@ bool Eskf::updateDepth(Scalar t, Scalar depth_m, Scalar R) {
   diag_.accept_depth++;
   return true;
 }
-
+//加速度计作为观测量，在机体近似静止情况下修正delt_theta
 bool Eskf::updateAccelTilt(Scalar /*t*/, const Vec3& accel_FRD, Scalar R_tilt) {
   if (!initialized_) return false;
 

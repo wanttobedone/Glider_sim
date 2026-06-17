@@ -1,15 +1,15 @@
 <!--
   状态估计层启动文件
   estimator:=robot_localization  (默认) — depth_converter + robot_localization EKF (baseline)
-  estimator:=ug_eskf             — 自研 ESKF glider_ekf_node (NED-FRD core)
+  estimator:=ug_eskf             — ESKF glider_ekf_node (NED-FRD core)
 -->
 <launch>
   <arg name="namespace" default="ug_glider"/>
-  <arg name="estimator" default="robot_localization"/>
+  <arg name="estimator" default="ug_eskf"/>
   <!-- 自研 ESKF 的 NED 初始航向 (默认场景 spawn ENU yaw=1.5708 → NED yaw=0) -->
   <arg name="init_yaw_ned_rad" default="0.0"/>
 
-  <!-- ====================== baseline: robot_localization ====================== -->
+  <!--   baseline: robot_localization   -->
   <group if="$(eval estimator == 'robot_localization')">
     <!-- 深度转换: FluidPressure → PoseWithCovarianceStamped -->
     <node name="depth_converter" pkg="ug_estimation" type="depth_converter_node"
@@ -27,7 +27,7 @@
     </node>
   </group>
 
-  <!-- ====================== 自研 ESKF: ug_eskf ====================== -->
+  <!--   自研 ESKF: ug_eskf   -->
   <group if="$(eval estimator == 'ug_eskf')">
     <node name="glider_ekf" pkg="ug_estimation" type="glider_ekf_node"
           ns="$(arg namespace)" output="screen">

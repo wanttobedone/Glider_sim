@@ -13,24 +13,24 @@ class Eskf {
  public:
   Eskf();
 
-  // 一次性初始化 (Phase 1)
+  // 一次性初始化 
   void initialize(const InitParams& params, const State& x0, const Mat15& P0);
 
-  // IMU 推进 (Phase 1)
-  // 输入：FRD 系角速度、比力（含重力）；t 为传感器时间戳 (s)
+  // IMU 推进
+  // 输入FRD 系角速度、比力（含重力）；t 为传感器时间戳 (s)
   void predictImu(Scalar t, const Vec3& gyro_FRD, const Vec3& accel_FRD);
 
-  // 测量更新（Phase 1+）。返回是否被接受 (false = NIS 拒绝)
+  // 测量更新，返回是否被接受 (false = NIS 拒绝)
   bool updateDepth(Scalar t, Scalar depth_m, Scalar R);
   // accel 找平：低加速度段用重力方向约束 roll/pitch（yaw 不可观）。
   // R_tilt 为每轴比力测量方差 (m/s^2)^2，需含残余线加速度的保守膨胀。
   // 调用方负责运动门控（|‖a‖-g|<ε_a 且 |gyro|<ε_ω）。
   bool updateAccelTilt(Scalar t, const Vec3& accel_FRD, Scalar R_tilt);
-  bool updateMag  (Scalar t, const Vec3& mag_FRD, Scalar R_yaw);     // Phase 2
+  bool updateMag  (Scalar t, const Vec3& mag_FRD, Scalar R_yaw);
   bool updateGps  (Scalar t, const Vec2& pNE, const Mat2& R);        // Phase 3
-  bool updateDvl  (Scalar t, const Vec3& v_FRD, const Mat3& R);      // Phase 3 (可选)
+  bool updateDvl  (Scalar t, const Vec3& v_FRD, const Mat3& R);      // Phase 3 
 
-  // 静态对齐：从静止段累积 accel/gyro/mag 估计初始 RPY 与 b_g
+  // 静态对齐，从静止段累积 accel/gyro/mag 估计初始 RPY 与 b_g
   // 内部不分配；wrapper 持有定长缓冲区指针传入。
   void staticAlign(const Vec3* acc_buf, const Vec3* gyro_buf,
                    const Vec3* mag_buf, std::size_t n);
