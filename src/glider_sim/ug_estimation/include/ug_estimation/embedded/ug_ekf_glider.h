@@ -1,8 +1,8 @@
 /* ug_estimation/embedded/ug_ekf_glider.h
  *
  * STM32 (及任意无 ROS 平台) 的 C 可调 ESKF wrapper 接口。
- * 纯 C 头：可被 C 固件 (FreeRTOS 任务) 直接 #include。实现为 C++ (ug_ekf_glider.cpp)，
- * 内部封装 ug_ekf::Eskf。无堆分配、无异常、无 iostream。
+ * 纯 C 头，可被 C 固件 (FreeRTOS 任务) 直接 #include。实现为 C++ (ug_ekf_glider.cpp)，
+ * 内部封装 ug_ekf::Eskf，无堆分配、无异常、无 iostream。
  *
  * 数据流（与仿真 ROS wrapper 等价，只喂 raw 量，core 自算 dt 做 align/predict/update）：
  *   板载 IMU_Core_GetRawData() → UgEkf_PushImu(gyro, accel, t_us)
@@ -10,11 +10,11 @@
  *   板载 pressure_bar          → UgEkf_PushPressureBar(bar, t_us)
  *   周期读取                    → UgEkf_GetOutput(&out)
  *
- * 坐标系：core 内部 NED-FRD。板载 IMU 模块自身轴系经 cfg.mount_R 旋到 body-FRD：
+ * 坐标系，core 内部 NED-FRD。板载 IMU 模块自身轴系经 cfg.mount_R 旋到 body-FRD：
  *   v_FRD = mount_R * v_module   (mount_R 行主序 3x3，由安装标定确定)
- * 单位：accel m/s^2，gyro rad/s，mag 任意(取方向)，pressure bar。
+ * 单位：accel m/s^2，gyro rad/s，mag 任意(取方向)，pressure bar
  *
- * 硬约束：不读取 IMU 模块的 orientation/quaternion/euler（C2）。
+ * 硬约束：不读取 IMU 模块的 orientation/quaternion/euler
  */
 #ifndef UG_EKF_GLIDER_H
 #define UG_EKF_GLIDER_H
@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-/* 配置，所有量纲见上。任意字段填 0 时用内部默认（见 .cpp）。 */
+/* 配置，所有量纲见上，任意字段填 0 时用内部默认（见 .cpp） */
 typedef struct {
   float gravity;            /* m/s^2，默认 9.81 */
   float p_atm_pa;           /* 大气压 Pa，默认 101325 */
@@ -35,6 +35,10 @@ typedef struct {
   float r_pressure_frd[3];  /* 压力计在 FRD 的杠杆臂 (m) */
 
   float static_align_seconds;   /* 静止对齐窗口 (s)，默认 8 */
+  float static_align_delay_seconds; /* 上机在收集静止样本之前的延迟时间，(s), default 1 */
+  float align_gate_acc;         /* 静止判定门限，加速度计: |norm(acc)-g| (m/s^2), default 0.6 */
+  float align_gate_gyro;        /* 静止判定门限，陀螺仪: norm(gyro) (rad/s), default 0.05 */
+  float align_nonstill_reset;   /* 连续非静止样本数达此值才丢弃对齐窗口；容忍短暂抖动。0=默认5 */
   float init_yaw_ned_rad;       /* 无 mag 时的初始航向 (rad)，默认 0 */
   float mag_declination_rad;    /* 磁偏角 (rad)，默认 0 */
 
@@ -48,19 +52,46 @@ typedef struct {
   float tilt_gate_acc, tilt_gate_gyro;
 } UgEkfConfig;
 
+/* EKF 运行阶段 / 健康状态机 (out.status) */
+typedef enum {
+  UG_EKF_UNINIT = 0,        /* 未初始化 (!UgEkf_Init) */
+  UG_EKF_WAIT_BOOT_DELAY,   /* 已初始化, 等待上电延迟窗口 */
+  UG_EKF_WAIT_STILL,        /* 等待静止 (晃动则停在此) */
+  UG_EKF_ALIGNING,          /* 正在累积静止窗口做静态对齐 */
+  UG_EKF_RUNNING,           /* 对齐完成, 正常 predict/update */
+  UG_EKF_FAULT              /* 数值失效 (NaN/Inf 或姿态协方差发散) */
+} UgEkfStatus;
+
 /* 输出状态 (NED-FRD 约定) */
 typedef struct {
   float roll, pitch, yaw;   /* rad */
-  float depth_m;            /* 正=水下 */
+  float pN, pE;             /* NED 水平位置估计 (m)。Phase1 无水平观测会漂移,
+                               用于观察 x/y 发散程度, 勿用于闭环定位 */
+  float depth_m;            /* = p_NED.z, 正=水下 */
   float vN, vE, vD;         /* NED 速度 m/s */
   float b_g[3], b_a[3];     /* 在线估计的零偏 (FRD) */
+
+  /* 协方差迹 (发散程度指示)。P_trace_pos≈水平位置发散 (D 项因深度可观很小) */
+  float P_trace_pos, P_trace_vel, P_trace_att;
 
   float nis_depth, nis_tilt, nis_mag;
   uint32_t accept_depth, reject_depth;
   uint32_t accept_tilt,  reject_tilt;
   uint32_t accept_mag,   reject_mag;
-  uint32_t reset_count;
-  uint8_t  aligned;         /* 1=已完成静态对齐进入 RUNNING */
+  uint32_t reset_count;       /* predict 阶段 dt 跳变重置次数 */
+
+  /* ── 对齐 / 健康诊断 ── */
+  uint8_t  status;            /* UgEkfStatus */
+  uint8_t  aligned;           /* 1=已完成静态对齐 (= status==RUNNING), 向后兼容保留 */
+  uint8_t  healthy;           /* 1=finite && RUNNING && dt 正常 */
+  uint8_t  still;             /* 当前是否判为静止 (对齐期 align gate, 运行期 tilt gate) */
+  uint8_t  valid_for_control; /* = (status==RUNNING && healthy); 控制器/上位机只判这一个 */
+  uint8_t  finite;            /* 1=全部输出状态有限 (无 NaN/Inf, 含速度) */
+  uint32_t align_sample_count;/* 已采纳的静止 IMU 样本数 */
+  uint32_t align_reset_count; /* 对齐中途晃动丢弃窗口次数 (区别于 reset_count) */
+  float    align_elapsed_s;   /* 当前静止窗口已持续秒数 */
+  float    dt_last;           /* 最近一次 predict 的 dt (s) */
+  float    t_last;            /* 最近喂入的 IMU 时间戳 (s); 上位机用 (now-t_last) 判数据中断 */
 } UgEkfOutput;
 
 /* 用默认值填充 cfg（调用方可随后覆盖个别字段）。 */

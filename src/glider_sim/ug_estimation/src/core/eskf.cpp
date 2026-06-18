@@ -1,6 +1,6 @@
 // ug_estimation/src/core/eskf.cpp
 //
-// Phase 1 实现：IMU 推进 + 深度更新 + 静态对齐。Phase 2/3 接口仍占位。
+// 已经实现IMU 预测 + 深度更新 + 静态对齐。Phase 3 接口占位。
 // 平台无关；无 ROS；无堆分配；无异常；无 RTTI。
 
 #include "ug_estimation/core/eskf.h"
@@ -29,7 +29,7 @@ void Eskf::initialize(const InitParams& params, const State& x0, const Mat15& P0
 void Eskf::predictImu(Scalar t, const Vec3& gyro_FRD, const Vec3& accel_FRD) {
   if (!initialized_) return;
 
-  // 首帧：仅记录时间戳，不做传播
+  // 首帧，仅记录时间戳，不做传播
   if (t_prev_ < Scalar(0)) {
     t_prev_ = t;
     diag_.t_last = t;

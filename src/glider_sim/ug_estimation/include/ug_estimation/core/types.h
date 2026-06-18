@@ -33,7 +33,7 @@ using Mat15 = Eigen::Matrix<Scalar, 15, 15>;
 
 using Quat = Eigen::Quaternion<Scalar>;
 
-// Nominal state (维度 16，分量分别为 p, v, q, b_g, b_a)
+// Nominal state名义状态16维向量，分量分别为 p, v, q, b_g, b_a
 struct State {
   Vec3 p_NED;       // [N, E, D] (m)
   Vec3 v_NED;       // [vN, vE, vD] (m/s)

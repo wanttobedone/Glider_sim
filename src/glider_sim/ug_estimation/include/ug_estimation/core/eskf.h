@@ -1,6 +1,6 @@
 // ug_estimation/core/eskf.h
 //
-// 平台无关 ESKF 主类（v1 仅声明，实现分阶段填充）。
+// 平台无关 ESKF 主类，部分仅声明，实现分阶段填充
 // API 不暴露 ROS 类型，不抛异常，不分配堆。
 
 #pragma once
