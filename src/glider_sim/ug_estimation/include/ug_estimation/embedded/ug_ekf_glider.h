@@ -14,7 +14,7 @@
  *   v_FRD = mount_R * v_module   (mount_R 行主序 3x3，由安装标定确定)
  * 单位：accel m/s^2，gyro rad/s，mag 任意(取方向)，pressure bar
  *
- * 硬约束：不读取 IMU 模块的 orientation/quaternion/euler
+ * 硬约束，不读取 IMU 模块的 orientation/quaternion/euler
  */
 #ifndef UG_EKF_GLIDER_H
 #define UG_EKF_GLIDER_H
@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-/* 配置，所有量纲见上，任意字段填 0 时用内部默认（见 .cpp） */
+/* 配置，所有量纲见上，任意字段填 0 时用内部默认,见 .cpp */
 typedef struct {
   float gravity;            /* m/s^2，默认 9.81 */
   float p_atm_pa;           /* 大气压 Pa，默认 101325 */
@@ -71,7 +71,7 @@ typedef struct {
   float vN, vE, vD;         /* NED 速度 m/s */
   float b_g[3], b_a[3];     /* 在线估计的零偏 (FRD) */
 
-  /* 协方差迹 (发散程度指示)。P_trace_pos≈水平位置发散 (D 项因深度可观很小) */
+  /* 协方差迹 ,发散程度指示, P_trace_pos≈水平位置发散 ,D 项因深度可观很小 */
   float P_trace_pos, P_trace_vel, P_trace_att;
 
   float nis_depth, nis_tilt, nis_mag;
@@ -80,7 +80,7 @@ typedef struct {
   uint32_t accept_mag,   reject_mag;
   uint32_t reset_count;       /* predict 阶段 dt 跳变重置次数 */
 
-  /* ── 对齐 / 健康诊断 ── */
+  /*   对齐 / 健康诊断   */
   uint8_t  status;            /* UgEkfStatus */
   uint8_t  aligned;           /* 1=已完成静态对齐 (= status==RUNNING), 向后兼容保留 */
   uint8_t  healthy;           /* 1=finite && RUNNING && dt 正常 */
