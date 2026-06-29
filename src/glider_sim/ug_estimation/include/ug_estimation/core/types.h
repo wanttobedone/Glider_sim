@@ -84,6 +84,9 @@ struct InitParams {
   // mag yaw NIS 门限（1-DOF，默认 χ²(0.99,1)=6.635）
   Scalar nis_gate_mag;
 
+  // 深度连续拒绝达此值 ⇒ 判定垂直通道发散，重置深度/垂直速度（失锁恢复）。0=关闭。
+  Scalar depth_reset_streak;
+
   NoiseParams noise;
 
   // 初始协方差对角元
@@ -109,6 +112,8 @@ struct Diagnostics {
   uint32_t accept_dvl   = 0, reject_dvl   = 0;
 
   uint32_t reset_count = 0;
+  uint32_t depth_reject_streak = 0;   // 当前连续深度拒绝数（accept 时清零）
+  uint32_t depth_reset_count   = 0;   // 失锁重置触发次数
   Scalar   dt_last = 0;
   Scalar   t_last  = 0;
 };

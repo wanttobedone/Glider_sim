@@ -31,7 +31,8 @@ class Eskf {
   bool updateDvl  (Scalar t, const Vec3& v_FRD, const Mat3& R);      // Phase 3 
 
   // 静态对齐，从静止段累积 accel/gyro/mag 估计初始 RPY 与 b_g
-  // 内部不分配；wrapper 持有定长缓冲区指针传入。
+  // 内部不分配；wrapper 持有定长缓冲区指针传入
+  // ROS里面用，下面的是嵌入式里面用的
   void staticAlign(const Vec3* acc_buf, const Vec3* gyro_buf,
                    const Vec3* mag_buf, std::size_t n);
 

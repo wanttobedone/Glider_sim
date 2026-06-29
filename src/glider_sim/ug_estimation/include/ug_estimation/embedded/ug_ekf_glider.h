@@ -50,6 +50,7 @@ typedef struct {
   float depth_var, tilt_var, mag_yaw_var;
   float nis_gate_depth, nis_gate_tilt, nis_gate_mag;
   float tilt_gate_acc, tilt_gate_gyro;
+  float depth_reset_streak;  /* 深度连续拒绝达此值触发失锁重置；0=用默认(10) */
 } UgEkfConfig;
 
 /* EKF 运行阶段 / 健康状态机 (out.status) */
@@ -79,6 +80,8 @@ typedef struct {
   uint32_t accept_tilt,  reject_tilt;
   uint32_t accept_mag,   reject_mag;
   uint32_t reset_count;       /* predict 阶段 dt 跳变重置次数 */
+  uint32_t depth_reject_streak; /* 当前连续深度拒绝数 */
+  uint32_t depth_reset_count;   /* 深度失锁重置触发次数 */
 
   /*   对齐 / 健康诊断   */
   uint8_t  status;            /* UgEkfStatus */

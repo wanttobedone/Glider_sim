@@ -78,6 +78,7 @@ InitParams buildParams() {
   p.nis_gate_depth = pick(g_cfg.nis_gate_depth, 6.635);
   p.nis_gate_tilt  = pick(g_cfg.nis_gate_tilt, 11.345);
   p.nis_gate_mag   = pick(g_cfg.nis_gate_mag, 6.635);
+  p.depth_reset_streak = pick(g_cfg.depth_reset_streak, 10.0);
   p.noise.sigma_g  = pick(g_cfg.sigma_g, 1e-3);
   p.noise.sigma_a  = pick(g_cfg.sigma_a, 1e-2);
   p.noise.sigma_bg = pick(g_cfg.sigma_bg, 1e-5);
@@ -132,6 +133,7 @@ void UgEkf_DefaultConfig(UgEkfConfig* cfg) {
   cfg->align_gate_gyro = 0.05f;
   cfg->align_nonstill_reset = float(kDefaultNonstillReset);
   cfg->depth_var = 0.01f;
+  cfg->depth_reset_streak = 10.0f;
   cfg->tilt_var = 0.25f;
   cfg->mag_yaw_var = 0.01f;
   cfg->tilt_gate_acc = 0.5f;
@@ -277,6 +279,8 @@ void UgEkf_GetOutput(UgEkfOutput* out) {
   out->accept_tilt  = d.accept_tilt;  out->reject_tilt  = d.reject_tilt;
   out->accept_mag   = d.accept_mag;   out->reject_mag   = d.reject_mag;
   out->reset_count  = d.reset_count;
+  out->depth_reject_streak = d.depth_reject_streak;
+  out->depth_reset_count   = d.depth_reset_count;
   out->dt_last = float(d.dt_last);
   out->t_last  = float(g_last_t_s);
 

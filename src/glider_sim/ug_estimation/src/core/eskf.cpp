@@ -82,6 +82,7 @@ bool Eskf::updateDepth(Scalar t, Scalar depth_m, Scalar R) {
   const Scalar S = (H * P_ * H.transpose())(0, 0) + R;
   if (S <= Scalar(0)) {
     diag_.reject_depth++;
+    diag_.depth_reject_streak++;
     return false;
   }
 
@@ -90,6 +91,21 @@ bool Eskf::updateDepth(Scalar t, Scalar depth_m, Scalar R) {
 
   if (nis > params_.nis_gate_depth) {
     diag_.reject_depth++;
+    diag_.depth_reject_streak++;
+    // 失锁恢复：连续拒绝次数达门限，判定垂直通道预测量发散，把深度对齐到测量、垂直速度清零、
+    // 解相关并把深度/垂直速度方差恢复到初值（PX4 resetHeight 思路），使后续量测重新被信任
+    if (params_.depth_reset_streak > Scalar(0) &&
+        Scalar(diag_.depth_reject_streak) >= params_.depth_reset_streak) {
+      x_.p_NED.z() = depth_m;
+      x_.v_NED.z() = Scalar(0);
+      P_.row(kIdxDeltaP + 2).setZero();  P_.col(kIdxDeltaP + 2).setZero();
+      P_.row(kIdxDeltaV + 2).setZero();  P_.col(kIdxDeltaV + 2).setZero();
+      P_(kIdxDeltaP + 2, kIdxDeltaP + 2) = params_.p0_pos;
+      P_(kIdxDeltaV + 2, kIdxDeltaV + 2) = params_.p0_vel;
+      enforceSymmetry();
+      diag_.depth_reset_count++;
+      diag_.depth_reject_streak = 0;
+    }
     return false;
   }
 
@@ -107,6 +123,7 @@ bool Eskf::updateDepth(Scalar t, Scalar depth_m, Scalar R) {
   enforceSymmetry();
 
   diag_.accept_depth++;
+  diag_.depth_reject_streak = 0;
   return true;
 }
 //加速度计作为观测量，在机体近似静止情况下修正delt_theta
@@ -185,7 +202,7 @@ bool Eskf::updateGps(Scalar /*t*/, const Vec2& /*pNE*/, const Mat2& /*R*/) {
 }
 
 bool Eskf::updateDvl(Scalar /*t*/, const Vec3& /*v_FRD*/, const Mat3& /*R*/) {
-  // TODO Phase 3 (可选)
+  //  后续可补充DVL
   return false;
 }
 
